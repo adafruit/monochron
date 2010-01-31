@@ -6,7 +6,7 @@ F_CPU = 8000000
 FORMAT = ihex 
 
 # Target file name (without extension).
-TARGET = ratt
+TARGET = monochron
 
 # Optimization level, can be [0, 1, 2, 3, s]. 0 turns off optimization.
 # (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
