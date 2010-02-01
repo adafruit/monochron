@@ -13,8 +13,9 @@
 #include "glcd.h"
 
 extern volatile uint8_t time_s, time_m, time_h;
+extern volatile uint8_t old_m, old_h;
 extern volatile uint8_t date_m, date_d, date_y;
-extern volatile uint8_t alarm_h, alarm_m;
+extern volatile uint8_t alarming, alarm_h, alarm_m;
 extern volatile uint8_t time_format;
 extern volatile uint8_t region;
 extern volatile uint8_t score_mode;
@@ -36,38 +37,42 @@ uint8_t last_score_mode = 0;
 
 void setscore(void)
 {
-	if(score_mode != last_score_mode)
-	{
-		redraw_time = 1;
-		last_score_mode = score_mode;
-	}
-	switch(score_mode)
-	{
-	case SCORE_MODE_TIME:
-		left_score = time_h;
-		right_score = time_m;
-		break;
-	case SCORE_MODE_DATE:
-		if(region == REGION_US)
-		{
-			left_score = date_m;
-			right_score = date_d;
-		}
-		else
-		{
-			left_score = date_d;
-			right_score = date_m;
-		}
-		break;
-	case SCORE_MODE_YEAR:
-		left_score = 20;
-		right_score = date_y;
-		break;
-	case SCORE_MODE_ALARM:
-		left_score = alarm_h;
-		right_score = alarm_m;
-		break;
-	}
+  if(score_mode != last_score_mode) {
+    redraw_time = 1;
+    last_score_mode = score_mode;
+  }
+  switch(score_mode) {
+    case SCORE_MODE_TIME:
+      if(alarming && (minute_changed || hour_changed)) {
+      	if(hour_changed) {
+	      left_score = old_h;
+	      right_score = old_m;
+	    } else if (minute_changed) {
+	      right_score = old_m;
+	    }
+      } else {
+        left_score = time_h;
+        right_score = time_m;
+      }
+      break;
+    case SCORE_MODE_DATE:
+      if(region == REGION_US) {
+        left_score = date_m;
+        right_score = date_d;
+      } else {
+        left_score = date_d;
+        right_score = date_m;
+      }
+      break;
+    case SCORE_MODE_YEAR:
+      left_score = 20;
+      right_score = date_y;
+      break;
+    case SCORE_MODE_ALARM:
+      left_score = alarm_h;
+      right_score = alarm_m;
+      break;
+  }
 }
 
 void initanim(void) {

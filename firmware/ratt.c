@@ -13,6 +13,7 @@
 
 
 volatile uint8_t time_s, time_m, time_h;
+volatile uint8_t old_h, old_m;
 volatile uint8_t timeunknown = 1;
 volatile uint8_t date_m, date_d, date_y;
 volatile uint8_t alarming, alarm_on, alarm_h, alarm_m;
@@ -412,8 +413,6 @@ SIGNAL (TIMER2_OVF_vect) {
   uint8_t last_h = time_h;
 
   readi2ctime();
-  
-  static uint8_t old_h, old_m;
   
   if (time_h != last_h) {
     hour_changed = 1; 
