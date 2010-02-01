@@ -13,15 +13,19 @@
 
 
 volatile uint8_t time_s, time_m, time_h;
+volatile uint8_t old_h, old_m;
 volatile uint8_t timeunknown = 1;
 volatile uint8_t date_m, date_d, date_y;
-volatile uint8_t alarming, alarm_on, alarm_h, alarm_m;
+volatile uint8_t alarming, alarm_on, alarm_tripped, alarm_h, alarm_m;
 volatile uint8_t displaymode;
 volatile uint8_t volume;
 volatile uint8_t sleepmode = 0;
 volatile uint8_t region;
+volatile uint8_t time_format;
 extern volatile uint8_t screenmutex;
 volatile uint8_t minute_changed = 0, hour_changed = 0;
+volatile uint8_t score_mode_timeout = 0;
+volatile uint8_t score_mode = SCORE_MODE_TIME;
 
 // These store the current button states for all 3 buttons. We can 
 // then query whether the buttons are pressed and released or pressed
@@ -46,7 +50,7 @@ SIGNAL(TIMER0_COMPA_vect) {
   if (animticker)
     animticker--;
 
-  if (alarming) {
+  if (alarming && !snoozetimer) {
     if (alarmticker == 0) {
       alarmticker = 300;
       if (TCCR1B == 0) {
@@ -64,9 +68,23 @@ SIGNAL(TIMER0_COMPA_vect) {
   }
 }
 
+void init_eeprom(void) {	//Set eeprom to a default state.
+  if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED) {
+    eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
+    eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
+    eeprom_write_byte((uint8_t *)EE_BRIGHT, 1);
+    eeprom_write_byte((uint8_t *)EE_VOLUME, 1);
+    eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
+    eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
+    eeprom_write_byte((uint8_t *)EE_SNOOZE, 10);
+    eeprom_write_byte((uint8_t *)EE_INIT, EE_INITIALIZED);
+  }
+}
+
 int main(void) {
   uint8_t inverted = 0;
   uint8_t mcustate;
+  uint8_t display_date = 0;
 
   // check if we were reset
   mcustate = MCUSR;
@@ -84,7 +102,9 @@ int main(void) {
 
   beep(4000, 100);
 
+  init_eeprom();
   region = eeprom_read_byte((uint8_t *)EE_REGION);
+  time_format = eeprom_read_byte((uint8_t *)EE_TIME_FORMAT);
   DEBUGP("buttons!");
   initbuttons();
 
@@ -119,8 +139,8 @@ int main(void) {
       glcdClearScreen();
       glcdFillRectangle(0, f, 8, g, ON);
       _delay_ms(100);
-      putstring("\n\rg = ");
-      uart_putw_dec(g);
+      DEBUG(putstring("\n\rg = "));
+      DEBUG(uart_putw_dec(g));
     }
   }
   halt();
@@ -156,6 +176,31 @@ int main(void) {
     animticker = ANIMTICK_MS;
 
     // check buttons to see if we have interaction stuff to deal with
+	if(just_pressed && alarming)
+	{
+	  just_pressed = 0;
+	  setsnooze();
+	}
+	if(display_date && !score_mode_timeout)
+	{
+	  score_mode = SCORE_MODE_YEAR;
+	  score_mode_timeout = 3;
+	  setscore();
+	  display_date = 0;
+	}
+
+    //Was formally set for just the + button.  However, because the Set button was never
+    //accounted for, If the alarm was turned on, and ONLY the set button was pushed since then,
+    //the alarm would not sound at alarm time, but go into a snooze immediately after going off.
+    //This could potentially make you late for work, and had to be fixed.
+	if (just_pressed & 0x6) {
+	  just_pressed = 0;
+	  display_date = 1;
+	  score_mode = SCORE_MODE_DATE;
+	  score_mode_timeout = 3;
+	  setscore();
+	}
+
     if (just_pressed & 0x1) {
       just_pressed = 0;
       switch(displaymode) {
@@ -254,6 +299,9 @@ void setalarmstate(void) {
       alarm_on = 1;
       // reset snoozing
       snoozetimer = 0;
+	  score_mode = SCORE_MODE_ALARM;
+	  score_mode_timeout = 3;
+	  setscore();
       DEBUGP("alarm on");
     }   
   }
@@ -282,7 +330,7 @@ uint8_t readi2ctime(void) {
   r = i2cMasterSendNI(0xD0, 1, &regaddr);
 
   if (r != 0) {
-    putstring("Reading i2c data: "); uart_putw_dec(r); putstring_nl("");
+    DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
     while(1) {
       beep(4000, 100);
       _delay_ms(100);
@@ -294,7 +342,7 @@ uint8_t readi2ctime(void) {
   r = i2cMasterReceiveNI(0xD0, 7, &clockdata[0]);
 
   if (r != 0) {
-    putstring("Reading i2c data: "); uart_putw_dec(r); putstring_nl("");
+    DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
     while(1) {
       beep(4000, 100);
       _delay_ms(100);
@@ -335,7 +383,7 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
   
   uint8_t r = i2cMasterSendNI(0xD0, 8, &clockdata[0]);
 
-  //putstring("Writing i2c data: "); uart_putw_dec(); putstring_nl("");
+  //DEBUG(putstring("Writing i2c data: ")); DEBUG(uart_putw_dec()); DEBUG(putstring_nl(""));
 
   if (r != 0) {
     while(1) {
@@ -365,22 +413,46 @@ SIGNAL (TIMER2_OVF_vect) {
   uint8_t last_h = time_h;
 
   readi2ctime();
-
-  if (time_s != last_s) {
-
-    putstring("**** ");
-    uart_putw_dec(time_h);
-    uart_putchar(':');
-    uart_putw_dec(time_m);
-    uart_putchar(':');
-    uart_putw_dec(time_s);
-    putstring_nl("****");
-  }
-
+  
   if (time_h != last_h) {
     hour_changed = 1; 
+    old_h = last_h;
+    old_m = last_m;
   } else if (time_m != last_m) {
     minute_changed = 1;
+    old_m = last_m;
+  }
+
+  if (time_s != last_s) {
+    if(alarming && snoozetimer)
+	  snoozetimer--;
+
+    if(score_mode_timeout) {
+	  score_mode_timeout--;
+	  if(!score_mode_timeout) {
+	    score_mode = SCORE_MODE_TIME;
+	    if(hour_changed) {
+	      time_h = old_h;
+	      time_m = old_m;
+	    } else if (minute_changed) {
+	      time_m = old_m;
+	    }
+	    setscore();
+	    if(hour_changed || minute_changed) {
+	      time_h = last_h;
+	      time_m = last_m;
+	    }
+	  }
+	}
+
+
+    DEBUG(putstring("**** "));
+    DEBUG(uart_putw_dec(time_h));
+    DEBUG(uart_putchar(':'));
+    DEBUG(uart_putw_dec(time_m));
+    DEBUG(uart_putchar(':'));
+    DEBUG(uart_putw_dec(time_s));
+    DEBUG(putstring_nl("****"));
   }
 
   if ((displaymode == SET_ALARM) ||
@@ -394,7 +466,7 @@ SIGNAL (TIMER2_OVF_vect) {
       glcdWriteChar(':', NORMAL);
       printnumber(time_s, NORMAL);
 
-      if (region == REGION_US) {
+      if (time_format == TIME_12H) {
 	glcdWriteChar(' ', NORMAL);
 	if (time_h >= 12) {
 	  glcdWriteChar('P', NORMAL);
@@ -406,8 +478,15 @@ SIGNAL (TIMER2_OVF_vect) {
 
   // check if we have an alarm set
   if (alarm_on && (time_s == 0) && (time_m == alarm_m) && (time_h == alarm_h)) {
-    putstring_nl("ALARM!!!");
-    alarming = 1;
+    DEBUG(putstring_nl("ALARM TRIPPED!!!"));
+    alarm_tripped = 1;
+  }
+  
+  //And wait till the score changes to actually set the alarm off.
+  if(!minute_changed && !hour_changed && alarm_tripped) {
+  	 DEBUG(putstring_nl("ALARM GOING!!!!"));
+  	 alarming = 1;
+  	 alarm_tripped = 0;
   }
 
   if (t2divider2 == 6) {
@@ -448,26 +527,26 @@ void clock_init(void) {
 
 
   if (readi2ctime()) {
-    putstring_nl("uh oh, RTC was off, lets reset it!");
+    DEBUGP("uh oh, RTC was off, lets reset it!");
     writei2ctime(0, 0, 12, 0, 1, 1, 9); // noon 1/1/2009
    }
 
   readi2ctime();
 
-  putstring("\n\rread ");
-  uart_putw_dec(time_h);
-  uart_putchar(':');
-  uart_putw_dec(time_m);
-  uart_putchar(':');
-  uart_putw_dec(time_s);
+  DEBUG(putstring("\n\rread "));
+  DEBUG(uart_putw_dec(time_h));
+  DEBUG(uart_putchar(':'));
+  DEBUG(uart_putw_dec(time_m));
+  DEBUG(uart_putchar(':'));
+  DEBUG(uart_putw_dec(time_s));
 
-  uart_putchar('\t');
-  uart_putw_dec(date_d);
-  uart_putchar('/');
-  uart_putw_dec(date_m);
-  uart_putchar('/');
-  uart_putw_dec(date_y);
-  putstring_nl("");
+  DEBUG(uart_putchar('\t'));
+  DEBUG(uart_putw_dec(date_d));
+  DEBUG(uart_putchar('/'));
+  DEBUG(uart_putw_dec(date_m));
+  DEBUG(uart_putchar('/'));
+  DEBUG(uart_putw_dec(date_y));
+  DEBUG(putstring_nl(""));
 
   alarm_m = eeprom_read_byte((uint8_t *)EE_ALARM_MIN) % 60;
   alarm_h = eeprom_read_byte((uint8_t *)EE_ALARM_HOUR) % 24;
@@ -488,9 +567,12 @@ void setsnooze(void) {
   //snoozetimer = eeprom_read_byte((uint8_t *)EE_SNOOZE);
   //snoozetimer *= 60; // convert minutes to seconds
   snoozetimer = MAXSNOOZE;
+  TCCR1B = 0;
+  // turn off piezo
+  PIEZO_PORT &= ~_BV(PIEZO);
   DEBUGP("snooze");
-  displaymode = SHOW_SNOOZE;
-  _delay_ms(1000);
+  //displaymode = SHOW_SNOOZE;
+  //_delay_ms(1000);
   displaymode = SHOW_TIME;
 }
 

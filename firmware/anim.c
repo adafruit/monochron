@@ -13,7 +13,12 @@
 #include "glcd.h"
 
 extern volatile uint8_t time_s, time_m, time_h;
+extern volatile uint8_t old_m, old_h;
+extern volatile uint8_t date_m, date_d, date_y;
+extern volatile uint8_t alarming, alarm_h, alarm_m;
+extern volatile uint8_t time_format;
 extern volatile uint8_t region;
+extern volatile uint8_t score_mode;
 
 uint8_t left_score, right_score;
 
@@ -28,13 +33,54 @@ int8_t rightpaddle_dy, leftpaddle_dy;
 extern volatile uint8_t minute_changed, hour_changed;
 
 uint8_t redraw_time = 0;
+uint8_t last_score_mode = 0;
+
+void setscore(void)
+{
+  if(score_mode != last_score_mode) {
+    redraw_time = 1;
+    last_score_mode = score_mode;
+  }
+  switch(score_mode) {
+    case SCORE_MODE_TIME:
+      if(alarming && (minute_changed || hour_changed)) {
+      	if(hour_changed) {
+	      left_score = old_h;
+	      right_score = old_m;
+	    } else if (minute_changed) {
+	      right_score = old_m;
+	    }
+      } else {
+        left_score = time_h;
+        right_score = time_m;
+      }
+      break;
+    case SCORE_MODE_DATE:
+      if(region == REGION_US) {
+        left_score = date_m;
+        right_score = date_d;
+      } else {
+        left_score = date_d;
+        right_score = date_m;
+      }
+      break;
+    case SCORE_MODE_YEAR:
+      left_score = 20;
+      right_score = date_y;
+      break;
+    case SCORE_MODE_ALARM:
+      left_score = alarm_h;
+      right_score = alarm_m;
+      break;
+  }
+}
 
 void initanim(void) {
-  putstring("screen width: ");
-  uart_putw_dec(GLCD_XPIXELS);
-  putstring("\n\rscreen height: ");
-  uart_putw_dec(GLCD_YPIXELS);
-  putstring_nl("");
+  DEBUG(putstring("screen width: "));
+  DEBUG(uart_putw_dec(GLCD_XPIXELS));
+  DEBUG(putstring("\n\rscreen height: "));
+  DEBUG(uart_putw_dec(GLCD_YPIXELS));
+  DEBUG(putstring_nl(""));
 
   leftpaddle_y = 25;
   rightpaddle_y = 25;
@@ -60,17 +106,18 @@ void initdisplay(uint8_t inverted) {
   // right paddle
   glcdFillRectangle(RIGHTPADDLE_X, rightpaddle_y, PADDLE_W, PADDLE_H, ! inverted);
       
-  left_score = time_h;
-  right_score = time_m;
+	//left_score = time_h;
+	//right_score = time_m;
+	setscore();
 
   // time
-  if (region == REGION_US)
-    drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
+	if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+		drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
   else 
     drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, left_score/10, inverted);
   
-  if (region == REGION_US)
-    drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
+	if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+		drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
   else
     drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left_score%10, inverted);
   
@@ -101,37 +148,43 @@ void step(void) {
   /************************************* TOP & BOTTOM WALLS */
   // bouncing off bottom wall, reverse direction
   if (ball_y  > (SCREEN_H - ball_radius*2 - BOTBAR_H)) {
-    //putstring_nl("bottom wall bounce");
+    //DEBUG(putstring_nl("bottom wall bounce"));
     ball_y = SCREEN_H - ball_radius*2 - BOTBAR_H;
     ball_dy *= -1;
   }
   
   // bouncing off top wall, reverse direction
   if (ball_y < TOPBAR_H) {
-    //putstring_nl("top wall bounce");
+    //DEBUG(putstring_nl("top wall bounce"));
     ball_y = TOPBAR_H;
     ball_dy *= -1;
   }
   
   // For debugging, print the ball location
-  putstring("ball @ ("); uart_putw_dec(ball_x); putstring(", "); uart_putw_dec(ball_y); putstring_nl(")");
+  DEBUG(putstring("ball @ (")); 
+  DEBUG(uart_putw_dec(ball_x)); 
+  DEBUG(putstring(", ")); 
+  DEBUG(uart_putw_dec(ball_y)); 
+  DEBUG(putstring_nl(")"));
   
   /************************************* LEFT & RIGHT WALLS */
   // the ball hits either wall, the ball resets location & angle
   if ((ball_x  > (SCREEN_W - ball_radius*2)) || ((int8_t)ball_x <= 0)) {
+  if(DEBUGGING) {
     if ((int8_t)ball_x <= 0) {
-      putstring("Left wall collide");
-      if (! minute_changed) {
-	putstring_nl("...on accident");
+        putstring("Left wall collide");
+        if (! minute_changed) {
+	  putstring_nl("...on accident");
+        } else {
+	  putstring_nl("...on purpose");
+        }
       } else {
-	putstring_nl("...on purpose");
-      }
-    } else {
-      putstring("Right wall collide");
-      if (! hour_changed) {
-	putstring_nl("...on accident");
-      } else {
-	putstring_nl("...on purpose");
+        putstring("Right wall collide");
+        if (! hour_changed) {
+	  putstring_nl("...on accident");
+        } else {
+	  putstring_nl("...on purpose");
+        }
       }
     }
 
@@ -151,10 +204,10 @@ void step(void) {
     redraw_time = 1;
     minute_changed = hour_changed = 0;
 
-    left_score = time_h;
-    right_score = time_m;
-
-  }
+		//left_score = time_h;
+		//right_score = time_m;
+		setscore();
+	}
 
  
 
@@ -168,7 +221,7 @@ void step(void) {
     if ((((int8_t)ball_x + ball_radius*2) >= RIGHTPADDLE_X) && 
 	((int8_t)oldball_x + ball_radius*2 <= RIGHTPADDLE_X)) {
     // check if we collided
-      putstring_nl("coll?");
+      DEBUG(putstring_nl("coll?"));
     // determine the exact position at which it would collide
     float dx = RIGHTPADDLE_X - (oldball_x + ball_radius*2);
     // now figure out what fraction that is of the motion and multiply that by the dy
@@ -176,16 +229,19 @@ void step(void) {
     
     if (intersectrect((oldball_x + dx), (oldball_y + dy), ball_radius*2, ball_radius*2, 
 		      RIGHTPADDLE_X, rightpaddle_y, PADDLE_W, PADDLE_H)) {
+	  if(DEBUGGING) {
       putstring_nl("nosect");
       if (hour_changed) {
 	// uh oh
 	putstring_nl("FAILED to miss");
       }
       
+      
       putstring("RCOLLISION  ball @ ("); uart_putw_dec(oldball_x + dx); putstring(", "); uart_putw_dec(oldball_y + dy);
       putstring(") & paddle @ ["); 
       uart_putw_dec(RIGHTPADDLE_X); putstring(", "); uart_putw_dec(rightpaddle_y); putstring("]");
-
+     }
+   
       // set the ball right up against the paddle
       ball_x = oldball_x + dx;
       ball_y = oldball_y + dy;
@@ -196,7 +252,7 @@ void step(void) {
       left_bouncepos = left_dest = left_keepout_top = left_keepout_bot = 0;
     } 
     // otherwise, it didn't bounce...will probably hit the right wall
-    putstring(" tix = "); uart_putw_dec(ticksremaining); putstring_nl("");
+    DEBUG(putstring(" tix = ")); DEBUG(uart_putw_dec(ticksremaining)); DEBUG(putstring_nl(""));
   }
   
 
@@ -205,10 +261,10 @@ void step(void) {
     
     if (right_keepout_top == 0 ) {
       ticksremaining = calculate_keepout(ball_x, ball_y, ball_dx, ball_dy, &right_bouncepos, &right_endpos);
-      
-      putstring("Expect bounce @ "); uart_putw_dec(right_bouncepos); 
-      putstring("-> thru to "); uart_putw_dec(right_endpos); putstring("\n\r");
-      
+      if(DEBUGGING) {
+        putstring("Expect bounce @ "); uart_putw_dec(right_bouncepos); 
+        putstring("-> thru to "); uart_putw_dec(right_endpos); putstring("\n\r");
+      }
       if (right_bouncepos > right_endpos) {
 	right_keepout_top = right_endpos;
 	right_keepout_bot = right_bouncepos + ball_radius*2;
@@ -216,27 +272,29 @@ void step(void) {
 	right_keepout_top = right_bouncepos;
 	right_keepout_bot = right_endpos + ball_radius*2;
       }
-      
+      if(DEBUGGING) {
       //putstring("Keepout from "); uart_putw_dec(right_keepout_top); 
       //putstring(" to "); uart_putw_dec(right_keepout_bot); putstring_nl("");
+      }
       
       // Now we can calculate where the paddle should go
       if (!hour_changed) {
 	// we want to hit the ball, so make it centered.
 	right_dest = right_bouncepos + ball_radius - PADDLE_H/2;
-	putstring("R -> "); uart_putw_dec(right_dest); putstring_nl("");
+	if(DEBUGGING)
+	  putstring("R -> "); uart_putw_dec(right_dest); putstring_nl("");
       } else {
 	// we lost the round so make sure we -dont- hit the ball
 	if (right_keepout_top <= (TOPBAR_H + PADDLE_H)) {
 	  // the ball is near the top so make sure it ends up right below it
-	  //  putstring_nl("at the top");
+	  //  DEBUG(putstring_nl("at the top"));
 	  right_dest = right_keepout_bot + 1;
 	} else if (right_keepout_bot >= (SCREEN_H - BOTBAR_H - PADDLE_H - 1)) {
 	  // the ball is near the bottom so make sure it ends up right above it
-	  //putstring_nl("at the bottom");
+	  //DEBUG(putstring_nl("at the bottom"));
 	  right_dest = right_keepout_top - PADDLE_H - 1;
 	} else {
-	  //putstring_nl("in the middle");
+	  //DEBUG(putstring_nl("in the middle"));
 	  if ( ((uint8_t)rand()) & 0x1)
 	    right_dest = right_keepout_top - PADDLE_H - 1;
 	  else
@@ -252,12 +310,12 @@ void step(void) {
     
     int8_t distance = rightpaddle_y - right_dest;
     
-    /*
+    /*if(DEBUGGING) {
     putstring("dest dist: "); uart_putw_dec(abs(distance)); 
     putstring("\n\rtix: "); uart_putw_dec(ticksremaining);
     putstring("\n\rmax travel: "); uart_putw_dec(ticksremaining * MAX_PADDLE_SPEED);
     putstring_nl("");
-    */
+    }*/
 
     // if we have just enough time, move the paddle!
     if (abs(distance) > (ticksremaining-1) * MAX_PADDLE_SPEED) {
@@ -289,14 +347,15 @@ void step(void) {
 
     if (intersectrect((oldball_x + dx), (oldball_y + dy), ball_radius*2, ball_radius*2, 
 		      LEFTPADDLE_X, leftpaddle_y, PADDLE_W, PADDLE_H)) {
-      
-      if (minute_changed) {
-	// uh oh
-	putstring_nl("FAILED to miss");
+      if(DEBUGGING) {
+        if (minute_changed) {
+	  // uh oh
+	  putstring_nl("FAILED to miss");
+        }
+        putstring("LCOLLISION ball @ ("); uart_putw_dec(oldball_x + dx); putstring(", "); uart_putw_dec(oldball_y + dy);
+        putstring(") & paddle @ ["); 
+        uart_putw_dec(LEFTPADDLE_X); putstring(", "); uart_putw_dec(leftpaddle_y); putstring("]");
       }
-      putstring("LCOLLISION ball @ ("); uart_putw_dec(oldball_x + dx); putstring(", "); uart_putw_dec(oldball_y + dy);
-      putstring(") & paddle @ ["); 
-      uart_putw_dec(LEFTPADDLE_X); putstring(", "); uart_putw_dec(leftpaddle_y); putstring("]");
 
       // bounce it
       ball_dx *= -1;
@@ -308,7 +367,7 @@ void step(void) {
       }
       left_bouncepos = left_dest = left_keepout_top = left_keepout_bot = 0;
     } 
-    putstring(" tix = "); uart_putw_dec(ticksremaining); putstring_nl("");      
+    if(DEBUGGING) { putstring(" tix = "); uart_putw_dec(ticksremaining); putstring_nl("");}
     // otherwise, it didn't bounce...will probably hit the left wall
   }
 
@@ -317,9 +376,10 @@ void step(void) {
     
     if (left_keepout_top == 0 ) {
       ticksremaining = calculate_keepout(ball_x, ball_y, ball_dx, ball_dy, &left_bouncepos, &left_endpos);
-      
-      putstring("Expect bounce @ "); uart_putw_dec(left_bouncepos); 
-      putstring("-> thru to "); uart_putw_dec(left_endpos); putstring("\n\r");
+      if(DEBUGGING) {
+        putstring("Expect bounce @ "); uart_putw_dec(left_bouncepos); 
+        putstring("-> thru to "); uart_putw_dec(left_endpos); putstring("\n\r");
+      }
       
       if (left_bouncepos > left_endpos) {
 	left_keepout_top = left_endpos;
@@ -328,33 +388,34 @@ void step(void) {
 	left_keepout_top = left_bouncepos;
 	left_keepout_bot = left_endpos + ball_radius*2;
       }
-      
+      // if(DEBUGGING) {
       // putstring("Keepout from "); uart_putw_dec(left_keepout_top); 
       //putstring(" to "); uart_putw_dec(left_keepout_bot); putstring_nl("");
+      // }
       
       // Now we can calculate where the paddle should go
       if (!minute_changed) {
 	// we want to hit the ball, so make it centered.
 	left_dest = left_bouncepos + ball_radius - PADDLE_H/2;
-	putstring("hitL -> "); uart_putw_dec(left_dest); putstring_nl("");
+	if(DEBUGGING) { putstring("hitL -> "); uart_putw_dec(left_dest); putstring_nl(""); }
       } else {
 	// we lost the round so make sure we -dont- hit the ball
 	if (left_keepout_top <= (TOPBAR_H + PADDLE_H)) {
 	  // the ball is near the top so make sure it ends up right below it
-	  putstring_nl("at the top");
+	  DEBUG(putstring_nl("at the top"));
 	  left_dest = left_keepout_bot + 1;
 	} else if (left_keepout_bot >= (SCREEN_H - BOTBAR_H - PADDLE_H - 1)) {
 	  // the ball is near the bottom so make sure it ends up right above it
-	  putstring_nl("at the bottom");
+	  DEBUG(putstring_nl("at the bottom"));
 	  left_dest = left_keepout_top - PADDLE_H - 1;
 	} else {
-	  putstring_nl("in the middle");
+	  DEBUG(putstring_nl("in the middle"));
 	  if ( ((uint8_t)rand()) & 0x1)
 	    left_dest = left_keepout_top - PADDLE_H - 1;
 	  else
 	    left_dest = left_keepout_bot + 1;
 	}
-	putstring("missL -> "); uart_putw_dec(left_dest); putstring_nl("");
+	if(DEBUGGING) {putstring("missL -> "); uart_putw_dec(left_dest); putstring_nl(""); }
       }
     } else {
       ticksremaining--;
@@ -364,15 +425,15 @@ void step(void) {
     
     int8_t distance = abs(leftpaddle_y - left_dest);
     
-    /*
+    /*if(DEBUGGING) {
     putstring("\n\rdest dist: "); uart_putw_dec(abs(distance)); 
     putstring("\n\rtix: "); uart_putw_dec(ticksremaining);
     /* 
     putstring("\n\rmax travel: "); uart_putw_dec(ticksremaining * MAX_PADDLE_SPEED);
     putstring_nl("");
-    */
+    }*/
 
-    //putstring("\n\rleft paddle @ "); uart_putw_dec(leftpaddle_y); putstring_nl("");
+    //if(DEBUGGING){putstring("\n\rleft paddle @ "); uart_putw_dec(leftpaddle_y); putstring_nl("");}
 
     // if we have just enough time, move the paddle!
     if (distance > ((ticksremaining-1) * MAX_PADDLE_SPEED)) {
@@ -464,8 +525,8 @@ void draw(uint8_t inverted) {
     if (redraw_time || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
 				      DISPLAY_H10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
       
-      if (region == REGION_US)
-	drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
+			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+				drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
       else 
 	drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, left_score/10, inverted);
     }
@@ -473,8 +534,8 @@ void draw(uint8_t inverted) {
     // redraw 1's of hours
     if (redraw_time || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
 		      DISPLAY_H1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
-      if (region == REGION_US)
-	drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
+			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+				drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
       else
 	drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left_score%10, inverted);
     }
@@ -560,16 +621,16 @@ float random_angle_rads(void) {
     float angle = rand();
 
     //angle = 31930; // MEME DEBUG
-    putstring("\n\rrand = "); uart_putw_dec(angle);
+    if(DEBUGGING){putstring("\n\rrand = "); uart_putw_dec(angle);}
     angle = (angle * (90.0 - MIN_BALL_ANGLE*2)  / RAND_MAX) + MIN_BALL_ANGLE;
 
     //pick the quadrant
     uint8_t quadrant = (rand() >> 8) % 4; 
     //quadrant = 2; // MEME DEBUG
 
-    putstring(" quad = "); uart_putw_dec(quadrant);
+    if(DEBUGGING){putstring(" quad = "); uart_putw_dec(quadrant);}
     angle += quadrant * 90;
-    putstring(" new ejection angle = "); uart_putw_dec(angle); putstring_nl("");
+    if(DEBUGGING){putstring(" new ejection angle = "); uart_putw_dec(angle); putstring_nl("");}
 
     angle *= 3.1415;
     angle /= 180;
@@ -610,7 +671,7 @@ uint8_t calculate_keepout(float theball_x, float theball_y, float theball_dx, fl
       // now figure out what fraction that is of the motion and multiply that by the dy
       float dy = (dx / sim_ball_dx) * sim_ball_dy;
 	  
-      putstring("RCOLL@ ("); uart_putw_dec(old_sim_ball_x + dx); putstring(", "); uart_putw_dec(old_sim_ball_y + dy);
+      if(DEBUGGING){putstring("RCOLL@ ("); uart_putw_dec(old_sim_ball_x + dx); putstring(", "); uart_putw_dec(old_sim_ball_y + dy);}
       
       *keepout1 = old_sim_ball_y + dy; 
       collided = 1;
@@ -623,7 +684,7 @@ uint8_t calculate_keepout(float theball_x, float theball_y, float theball_dx, fl
       // now figure out what fraction that is of the motion and multiply that by the dy
       float dy = (dx / sim_ball_dx) * sim_ball_dy;
 	  
-      //putstring("LCOLL@ ("); uart_putw_dec(old_sim_ball_x + dx); putstring(", "); uart_putw_dec(old_sim_ball_y + dy);
+      //if(DEBUGGING){putstring("LCOLL@ ("); uart_putw_dec(old_sim_ball_x + dx); putstring(", "); uart_putw_dec(old_sim_ball_y + dy);}
       
       *keepout1 = old_sim_ball_y + dy; 
       collided = 1;
@@ -632,7 +693,7 @@ uint8_t calculate_keepout(float theball_x, float theball_y, float theball_dx, fl
       tix++;
     }
     
-    //putstring("\tSIMball @ ["); uart_putw_dec(sim_ball_x); putstring(", "); uart_putw_dec(sim_ball_y); putstring_nl("]");
+    //if(DEBUGGING){putstring("\tSIMball @ ["); uart_putw_dec(sim_ball_x); putstring(", "); uart_putw_dec(sim_ball_y); putstring_nl("]");}
   }
   *keepout2 = sim_ball_y;
 
