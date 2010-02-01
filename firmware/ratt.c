@@ -68,17 +68,16 @@ SIGNAL(TIMER0_COMPA_vect) {
 }
 
 void init_eeprom(void) {	//Set eeprom to a default state.
-	if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED)
-	{
-		eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
-		eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
-		eeprom_write_byte((uint8_t *)EE_BRIGHT, 1);
-		eeprom_write_byte((uint8_t *)EE_VOLUME, 1);
-		eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
-		eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
-		eeprom_write_byte((uint8_t *)EE_SNOOZE, 10);
-		eeprom_write_byte((uint8_t *)EE_INIT, EE_INITIALIZED);
-	}
+  if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED) {
+    eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
+    eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
+    eeprom_write_byte((uint8_t *)EE_BRIGHT, 1);
+    eeprom_write_byte((uint8_t *)EE_VOLUME, 1);
+    eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
+    eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
+    eeprom_write_byte((uint8_t *)EE_SNOOZE, 10);
+    eeprom_write_byte((uint8_t *)EE_INIT, EE_INITIALIZED);
+  }
 }
 
 int main(void) {
@@ -189,15 +188,17 @@ int main(void) {
 	  display_date = 0;
 	}
 
-	if (just_pressed & 0x4) {
+    //Was formally set for just the + button.  However, because the Set button was never
+    //accounted for, If the alarm was turned on, and ONLY the set button was pushed since then,
+    //the alarm would not sound at alarm time, but go into a snooze immediately after going off.
+    //This could potentially make you late for work, and had to be fixed.
+	if (just_pressed & 0x6) {
 	  just_pressed = 0;
 	  display_date = 1;
 	  score_mode = SCORE_MODE_DATE;
 	  score_mode_timeout = 3;
 	  setscore();
 	}
-
-		
 
     if (just_pressed & 0x1) {
       just_pressed = 0;
