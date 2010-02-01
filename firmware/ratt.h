@@ -2,7 +2,7 @@
 
 #define DEBUGGING 0
 #define DEBUG(x)  if (DEBUGGING) { x; }
-
+#define DEBUGP(x) DEBUG(putstring_nl(x))
 
 // This is a tradeoff between sluggish and too fast to see
 #define MAX_BALL_SPEED 5 // note this is in vector arith.

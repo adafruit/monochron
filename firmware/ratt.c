@@ -20,8 +20,11 @@ volatile uint8_t displaymode;
 volatile uint8_t volume;
 volatile uint8_t sleepmode = 0;
 volatile uint8_t region;
+volatile uint8_t time_format;
 extern volatile uint8_t screenmutex;
 volatile uint8_t minute_changed = 0, hour_changed = 0;
+volatile uint8_t score_mode_timeout = 0;
+volatile uint8_t score_mode = SCORE_MODE_TIME;
 
 // These store the current button states for all 3 buttons. We can 
 // then query whether the buttons are pressed and released or pressed
@@ -46,7 +49,7 @@ SIGNAL(TIMER0_COMPA_vect) {
   if (animticker)
     animticker--;
 
-  if (alarming) {
+  if (alarming && !snoozetimer) {
     if (alarmticker == 0) {
       alarmticker = 300;
       if (TCCR1B == 0) {
@@ -64,9 +67,24 @@ SIGNAL(TIMER0_COMPA_vect) {
   }
 }
 
+void init_eeprom(void) {	//Set eeprom to a default state.
+	if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED)
+	{
+		eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
+		eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
+		eeprom_write_byte((uint8_t *)EE_BRIGHT, 1);
+		eeprom_write_byte((uint8_t *)EE_VOLUME, 1);
+		eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
+		eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
+		eeprom_write_byte((uint8_t *)EE_SNOOZE, 10);
+		eeprom_write_byte((uint8_t *)EE_INIT, EE_INITIALIZED);
+	}
+}
+
 int main(void) {
   uint8_t inverted = 0;
   uint8_t mcustate;
+  uint8_t display_date = 0;
 
   // check if we were reset
   mcustate = MCUSR;
@@ -84,7 +102,9 @@ int main(void) {
 
   beep(4000, 100);
 
+  init_eeprom();
   region = eeprom_read_byte((uint8_t *)EE_REGION);
+  time_format = eeprom_read_byte((uint8_t *)EE_TIME_FORMAT);
   DEBUGP("buttons!");
   initbuttons();
 
@@ -156,6 +176,29 @@ int main(void) {
     animticker = ANIMTICK_MS;
 
     // check buttons to see if we have interaction stuff to deal with
+	if(just_pressed && alarming)
+	{
+	  just_pressed = 0;
+	  setsnooze();
+	}
+	if(display_date && !score_mode_timeout)
+	{
+	  score_mode = SCORE_MODE_YEAR;
+	  score_mode_timeout = 3;
+	  setscore();
+	  display_date = 0;
+	}
+
+	if (just_pressed & 0x4) {
+	  just_pressed = 0;
+	  display_date = 1;
+	  score_mode = SCORE_MODE_DATE;
+	  score_mode_timeout = 3;
+	  setscore();
+	}
+
+		
+
     if (just_pressed & 0x1) {
       just_pressed = 0;
       switch(displaymode) {
@@ -254,6 +297,9 @@ void setalarmstate(void) {
       alarm_on = 1;
       // reset snoozing
       snoozetimer = 0;
+	  score_mode = SCORE_MODE_ALARM;
+	  score_mode_timeout = 3;
+	  setscore();
       DEBUGP("alarm on");
     }   
   }
@@ -365,8 +411,40 @@ SIGNAL (TIMER2_OVF_vect) {
   uint8_t last_h = time_h;
 
   readi2ctime();
+  
+  static uint8_t old_h, old_m;
+  
+  if (time_h != last_h) {
+    hour_changed = 1; 
+    old_h = last_h;
+    old_m = last_m;
+  } else if (time_m != last_m) {
+    minute_changed = 1;
+    old_m = last_m;
+  }
 
   if (time_s != last_s) {
+    if(alarming && snoozetimer)
+	  snoozetimer--;
+
+    if(score_mode_timeout) {
+	  score_mode_timeout--;
+	  if(!score_mode_timeout) {
+	    score_mode = SCORE_MODE_TIME;
+	    if(hour_changed) {
+	      time_h = old_h;
+	      time_m = old_m;
+	    } else if (minute_changed) {
+	      time_m = old_m;
+	    }
+	    setscore();
+	    if(hour_changed || minute_changed) {
+	      time_h = last_h;
+	      time_m = last_m;
+	    }
+	  }
+	}
+
 
     putstring("**** ");
     uart_putw_dec(time_h);
@@ -375,12 +453,6 @@ SIGNAL (TIMER2_OVF_vect) {
     uart_putchar(':');
     uart_putw_dec(time_s);
     putstring_nl("****");
-  }
-
-  if (time_h != last_h) {
-    hour_changed = 1; 
-  } else if (time_m != last_m) {
-    minute_changed = 1;
   }
 
   if ((displaymode == SET_ALARM) ||
@@ -394,7 +466,7 @@ SIGNAL (TIMER2_OVF_vect) {
       glcdWriteChar(':', NORMAL);
       printnumber(time_s, NORMAL);
 
-      if (region == REGION_US) {
+      if (time_format == TIME_12H) {
 	glcdWriteChar(' ', NORMAL);
 	if (time_h >= 12) {
 	  glcdWriteChar('P', NORMAL);
@@ -488,9 +560,12 @@ void setsnooze(void) {
   //snoozetimer = eeprom_read_byte((uint8_t *)EE_SNOOZE);
   //snoozetimer *= 60; // convert minutes to seconds
   snoozetimer = MAXSNOOZE;
+  TCCR1B = 0;
+  // turn off piezo
+  PIEZO_PORT &= ~_BV(PIEZO);
   DEBUGP("snooze");
-  displaymode = SHOW_SNOOZE;
-  _delay_ms(1000);
+  //displaymode = SHOW_SNOOZE;
+  //_delay_ms(1000);
   displaymode = SHOW_TIME;
 }
 

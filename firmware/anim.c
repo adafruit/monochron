@@ -13,7 +13,11 @@
 #include "glcd.h"
 
 extern volatile uint8_t time_s, time_m, time_h;
+extern volatile uint8_t date_m, date_d, date_y;
+extern volatile uint8_t alarm_h, alarm_m;
+extern volatile uint8_t time_format;
 extern volatile uint8_t region;
+extern volatile uint8_t score_mode;
 
 uint8_t left_score, right_score;
 
@@ -28,6 +32,43 @@ int8_t rightpaddle_dy, leftpaddle_dy;
 extern volatile uint8_t minute_changed, hour_changed;
 
 uint8_t redraw_time = 0;
+uint8_t last_score_mode = 0;
+
+void setscore(void)
+{
+	if(score_mode != last_score_mode)
+	{
+		redraw_time = 1;
+		last_score_mode = score_mode;
+	}
+	switch(score_mode)
+	{
+	case SCORE_MODE_TIME:
+		left_score = time_h;
+		right_score = time_m;
+		break;
+	case SCORE_MODE_DATE:
+		if(region == REGION_US)
+		{
+			left_score = date_m;
+			right_score = date_d;
+		}
+		else
+		{
+			left_score = date_d;
+			right_score = date_m;
+		}
+		break;
+	case SCORE_MODE_YEAR:
+		left_score = 20;
+		right_score = date_y;
+		break;
+	case SCORE_MODE_ALARM:
+		left_score = alarm_h;
+		right_score = alarm_m;
+		break;
+	}
+}
 
 void initanim(void) {
   putstring("screen width: ");
@@ -60,17 +101,18 @@ void initdisplay(uint8_t inverted) {
   // right paddle
   glcdFillRectangle(RIGHTPADDLE_X, rightpaddle_y, PADDLE_W, PADDLE_H, ! inverted);
       
-  left_score = time_h;
-  right_score = time_m;
+	//left_score = time_h;
+	//right_score = time_m;
+	setscore();
 
   // time
-  if (region == REGION_US)
-    drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
+	if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+		drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
   else 
     drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, left_score/10, inverted);
   
-  if (region == REGION_US)
-    drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
+	if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+		drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
   else
     drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left_score%10, inverted);
   
@@ -151,10 +193,10 @@ void step(void) {
     redraw_time = 1;
     minute_changed = hour_changed = 0;
 
-    left_score = time_h;
-    right_score = time_m;
-
-  }
+		//left_score = time_h;
+		//right_score = time_m;
+		setscore();
+	}
 
  
 
@@ -464,8 +506,8 @@ void draw(uint8_t inverted) {
     if (redraw_time || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
 				      DISPLAY_H10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
       
-      if (region == REGION_US)
-	drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
+			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+				drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
       else 
 	drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, left_score/10, inverted);
     }
@@ -473,8 +515,8 @@ void draw(uint8_t inverted) {
     // redraw 1's of hours
     if (redraw_time || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
 		      DISPLAY_H1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
-      if (region == REGION_US)
-	drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
+			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+				drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
       else
 	drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left_score%10, inverted);
     }
