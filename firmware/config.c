@@ -101,8 +101,11 @@ void set_date(void) {
 
   display_menu();
 
+  screenmutex++;
   // put a small arrow next to 'set date'
   drawArrow(0, 27, MENU_INDENT -1);
+  screenmutex--;
+  
   timeoutcounter = INACTIVITYTIMEOUT;  
 
   while (1) {
