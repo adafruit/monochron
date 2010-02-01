@@ -122,7 +122,7 @@ void set_date(void) {
       screenmutex++;
 
       if ((mode == SET_DATE) && (region == REGION_US)) {
-	putstring("Set date month");
+	DEBUG(putstring("Set date month"));
 	// ok now its selected
 	mode = SET_MONTH;
 
@@ -135,7 +135,7 @@ void set_date(void) {
 	glcdSetAddress(0, 7);
 	glcdPutStr("Press SET to set mon.", NORMAL);
       } else if ((mode == SET_DATE) && (region == REGION_EU)) {
-	putstring("Set date month");
+	DEBUG(putstring("Set date month"));
 	// ok now its selected
 	mode = SET_DAY;
 
@@ -148,7 +148,7 @@ void set_date(void) {
 	glcdSetAddress(0, 7);
 	glcdPutStr("Press SET to set date", NORMAL);
       } else if ((mode == SET_MONTH) && (region == REGION_US)) {
-	putstring("Set date day");
+	DEBUG(putstring("Set date day"));
 	mode = SET_DAY;
 
 	// print the month normal
@@ -163,7 +163,7 @@ void set_date(void) {
 	glcdSetAddress(0, 7);
 	glcdPutStr("Press SET to set date", NORMAL);
       }else if ((mode == SET_DAY) && (region == REGION_EU)) {
-	putstring("Set date month");
+	DEBUG(putstring("Set date month"));
 	mode = SET_MONTH;
 
 	// print the day normal
@@ -179,7 +179,7 @@ void set_date(void) {
 	glcdPutStr("Press SET to set mon.", NORMAL);
       } else if ( ((mode == SET_DAY) && (region == REGION_US)) ||
 		  ((mode == SET_MONTH) && (region == REGION_EU)) )  {
-	putstring("Set year");
+	DEBUG(putstring("Set year"));
 	mode = SET_YEAR;
 	// print the date normal
 
@@ -203,7 +203,7 @@ void set_date(void) {
 	glcdPutStr("Press SET to set year", NORMAL);
       } else {
 	// done!
-	putstring("done setting date");
+	DEBUG(putstring("done setting date"));
 	mode = SET_DATE;
 	// print the seconds normal
 	glcdSetAddress(MENU_INDENT + 18*6, 3);
@@ -291,7 +291,7 @@ void set_region(void) {
       screenmutex++;
 
       if (mode == SET_REGION) {
-	putstring("Setting region");
+	DEBUG(putstring("Setting region"));
 	// ok now its selected
 	mode = SET_REG;
 	// print the region 
@@ -396,7 +396,7 @@ void set_alarm(void) {
       screenmutex++;
 
       if (mode == SET_ALARM) {
-	putstring("Set alarm hour");
+	DEBUG(putstring("Set alarm hour"));
 	// ok now its selected
 	mode = SET_HOUR;
 
@@ -408,7 +408,7 @@ void set_alarm(void) {
 	glcdSetAddress(0, 7);
 	glcdPutStr("Press SET to set hour", NORMAL);
       } else if (mode == SET_HOUR) {
-	putstring("Set alarm min");
+	DEBUG(putstring("Set alarm min"));
 	mode = SET_MIN;
 	// print the hour normal
 	glcdSetAddress(MENU_INDENT + 12*6, 1);
@@ -494,7 +494,7 @@ void set_time(void) {
       screenmutex++;
 
       if (mode == SET_TIME) {
-	putstring("Set time hour");
+	DEBUG(putstring("Set time hour"));
 	// ok now its selected
 	mode = SET_HOUR;
 
@@ -517,7 +517,7 @@ void set_time(void) {
 	glcdSetAddress(0, 7);
 	glcdPutStr("Press SET to set hour", NORMAL);
       } else if (mode == SET_HOUR) {
-	putstring("Set time min");
+	DEBUG(putstring("Set time min"));
 	mode = SET_MIN;
 	// print the hour normal
 	glcdSetAddress(MENU_INDENT + 10*6, 2);
@@ -541,7 +541,7 @@ void set_time(void) {
 	  }
 	}
       } else if (mode == SET_MIN) {
-	putstring("Set time sec");
+	DEBUG(putstring("Set time sec"));
 	mode = SET_SEC;
 	// and the minutes normal
 	if(time_format == TIME_12H) {
@@ -560,7 +560,7 @@ void set_time(void) {
 	glcdPutStr("Press SET to set secs", NORMAL);
       } else {
 	// done!
-	putstring("done setting time");
+	DEBUG(putstring("done setting time"));
 	mode = SET_TIME;
 	// print the seconds normal
 	if(time_format == TIME_12H) {

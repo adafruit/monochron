@@ -139,8 +139,8 @@ int main(void) {
       glcdClearScreen();
       glcdFillRectangle(0, f, 8, g, ON);
       _delay_ms(100);
-      putstring("\n\rg = ");
-      uart_putw_dec(g);
+      DEBUG(putstring("\n\rg = "));
+      DEBUG(uart_putw_dec(g));
     }
   }
   halt();
@@ -330,7 +330,7 @@ uint8_t readi2ctime(void) {
   r = i2cMasterSendNI(0xD0, 1, &regaddr);
 
   if (r != 0) {
-    putstring("Reading i2c data: "); uart_putw_dec(r); putstring_nl("");
+    DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
     while(1) {
       beep(4000, 100);
       _delay_ms(100);
@@ -342,7 +342,7 @@ uint8_t readi2ctime(void) {
   r = i2cMasterReceiveNI(0xD0, 7, &clockdata[0]);
 
   if (r != 0) {
-    putstring("Reading i2c data: "); uart_putw_dec(r); putstring_nl("");
+    DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
     while(1) {
       beep(4000, 100);
       _delay_ms(100);
@@ -383,7 +383,7 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
   
   uint8_t r = i2cMasterSendNI(0xD0, 8, &clockdata[0]);
 
-  //putstring("Writing i2c data: "); uart_putw_dec(); putstring_nl("");
+  //DEBUG(putstring("Writing i2c data: ")); DEBUG(uart_putw_dec()); DEBUG(putstring_nl(""));
 
   if (r != 0) {
     while(1) {
@@ -446,13 +446,13 @@ SIGNAL (TIMER2_OVF_vect) {
 	}
 
 
-    putstring("**** ");
-    uart_putw_dec(time_h);
-    uart_putchar(':');
-    uart_putw_dec(time_m);
-    uart_putchar(':');
-    uart_putw_dec(time_s);
-    putstring_nl("****");
+    DEBUG(putstring("**** "));
+    DEBUG(uart_putw_dec(time_h));
+    DEBUG(uart_putchar(':'));
+    DEBUG(uart_putw_dec(time_m));
+    DEBUG(uart_putchar(':'));
+    DEBUG(uart_putw_dec(time_s));
+    DEBUG(putstring_nl("****"));
   }
 
   if ((displaymode == SET_ALARM) ||
@@ -478,12 +478,13 @@ SIGNAL (TIMER2_OVF_vect) {
 
   // check if we have an alarm set
   if (alarm_on && (time_s == 0) && (time_m == alarm_m) && (time_h == alarm_h)) {
-    putstring_nl("ALARM!!!");
+    DEBUG(putstring_nl("ALARM TRIPPED!!!"));
     alarm_tripped = 1;
   }
   
   //And wait till the score changes to actually set the alarm off.
   if(!minute_changed && !hour_changed && alarm_tripped) {
+  	 DEBUG(putstring_nl("ALARM GOING!!!!"));
   	 alarming = 1;
   	 alarm_tripped = 0;
   }
@@ -526,26 +527,26 @@ void clock_init(void) {
 
 
   if (readi2ctime()) {
-    putstring_nl("uh oh, RTC was off, lets reset it!");
+    DEBUGP("uh oh, RTC was off, lets reset it!");
     writei2ctime(0, 0, 12, 0, 1, 1, 9); // noon 1/1/2009
    }
 
   readi2ctime();
 
-  putstring("\n\rread ");
-  uart_putw_dec(time_h);
-  uart_putchar(':');
-  uart_putw_dec(time_m);
-  uart_putchar(':');
-  uart_putw_dec(time_s);
+  DEBUG(putstring("\n\rread "));
+  DEBUG(uart_putw_dec(time_h));
+  DEBUG(uart_putchar(':'));
+  DEBUG(uart_putw_dec(time_m));
+  DEBUG(uart_putchar(':'));
+  DEBUG(uart_putw_dec(time_s));
 
-  uart_putchar('\t');
-  uart_putw_dec(date_d);
-  uart_putchar('/');
-  uart_putw_dec(date_m);
-  uart_putchar('/');
-  uart_putw_dec(date_y);
-  putstring_nl("");
+  DEBUG(uart_putchar('\t'));
+  DEBUG(uart_putw_dec(date_d));
+  DEBUG(uart_putchar('/'));
+  DEBUG(uart_putw_dec(date_m));
+  DEBUG(uart_putchar('/'));
+  DEBUG(uart_putw_dec(date_y));
+  DEBUG(putstring_nl(""));
 
   alarm_m = eeprom_read_byte((uint8_t *)EE_ALARM_MIN) % 60;
   alarm_h = eeprom_read_byte((uint8_t *)EE_ALARM_HOUR) % 24;
