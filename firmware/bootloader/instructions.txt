@@ -1,0 +1,2 @@
+We're using the classic Arduino bootloader but for the internal 8MHz oscillator. 
+Edit the makefile for your type of programmer and type in "make atmega328_prores_isp"
