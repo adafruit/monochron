@@ -266,11 +266,15 @@ void set_region(void) {
   uint8_t mode = SET_REGION;
 
   display_menu();
+  
+  screenmutex++;
   glcdSetAddress(0, 6);
   glcdPutStr("Press MENU to exit   ", NORMAL);
 
   // put a small arrow next to 'set 12h/24h'
   drawArrow(0, 35, MENU_INDENT -1);
+  screenmutex--;
+  
   timeoutcounter = INACTIVITYTIMEOUT;  
 
   while (1) {
@@ -374,9 +378,10 @@ void set_alarm(void) {
   uint8_t mode = SET_ALARM;
 
   display_menu();
-  
+  screenmutex++;
   // put a small arrow next to 'set alarm'
   drawArrow(0, 11, MENU_INDENT -1);
+  screenmutex--;
   timeoutcounter = INACTIVITYTIMEOUT;  
 
   while (1) {
@@ -472,8 +477,10 @@ void set_time(void) {
 
   display_menu();
   
+  screenmutex++;
   // put a small arrow next to 'set time'
   drawArrow(0, 19, MENU_INDENT -1);
+  screenmutex--;
  
   timeoutcounter = INACTIVITYTIMEOUT;  
 
