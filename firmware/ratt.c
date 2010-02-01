@@ -279,6 +279,7 @@ void setalarmstate(void) {
     if (alarm_on) {
       // turn off the alarm
       alarm_on = 0;
+      alarm_tripped = 0;
       snoozetimer = 0;
       if (alarming) {
 	// if the alarm is going off, we should turn it off
