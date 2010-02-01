@@ -428,7 +428,7 @@ void step(void) {
     /*if(DEBUGGING) {
     putstring("\n\rdest dist: "); uart_putw_dec(abs(distance)); 
     putstring("\n\rtix: "); uart_putw_dec(ticksremaining);
-    /* 
+    
     putstring("\n\rmax travel: "); uart_putw_dec(ticksremaining * MAX_PADDLE_SPEED);
     putstring_nl("");
     }*/

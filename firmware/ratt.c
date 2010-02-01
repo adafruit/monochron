@@ -129,10 +129,8 @@ int main(void) {
 
   glcdInit();
   glcdClearScreen();
-  /*
-  glcdFillRectangle(0, 4, 1, 10, ON);
-  glcdFillRectangle(8, 4, 1, 20, ON);
-   halt();
+  
+
    /*
   for (uint8_t f=0; f<64; f++) {
     for (uint8_t g=0; g+f < 64; g++) {
@@ -455,9 +453,9 @@ SIGNAL (TIMER2_OVF_vect) {
     DEBUG(putstring_nl("****"));
   }
 
-  if ((displaymode == SET_ALARM) ||
-      (displaymode == SET_DATE) ||
-      (displaymode == SET_REGION) &&
+  if (((displaymode == SET_ALARM) ||
+       (displaymode == SET_DATE) ||
+       (displaymode == SET_REGION)) &&
       (!screenmutex) ) {
       glcdSetAddress(MENU_INDENT + 10*6, 2);
       print_timehour(time_h, NORMAL);

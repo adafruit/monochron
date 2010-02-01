@@ -172,7 +172,9 @@ void drawmidline(uint8_t inverted);
 
 float random_angle_rads(void);
 
-inline uint8_t i2bcd(uint8_t x);
+uint8_t i2bcd(uint8_t x);
 
 uint8_t readi2ctime(void);
 
+void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
+		  uint8_t date, uint8_t mon, uint8_t yr);
