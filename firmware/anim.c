@@ -169,8 +169,8 @@ void step(void) {
   
   /************************************* LEFT & RIGHT WALLS */
   // the ball hits either wall, the ball resets location & angle
-  if(DEBUGGING) {
   if ((ball_x  > (SCREEN_W - ball_radius*2)) || ((int8_t)ball_x <= 0)) {
+  if(DEBUGGING) {
     if ((int8_t)ball_x <= 0) {
         putstring("Left wall collide");
         if (! minute_changed) {
