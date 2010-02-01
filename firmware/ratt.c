@@ -16,7 +16,7 @@ volatile uint8_t time_s, time_m, time_h;
 volatile uint8_t old_h, old_m;
 volatile uint8_t timeunknown = 1;
 volatile uint8_t date_m, date_d, date_y;
-volatile uint8_t alarming, alarm_on, alarm_h, alarm_m;
+volatile uint8_t alarming, alarm_on, alarm_tripped, alarm_h, alarm_m;
 volatile uint8_t displaymode;
 volatile uint8_t volume;
 volatile uint8_t sleepmode = 0;
@@ -479,7 +479,13 @@ SIGNAL (TIMER2_OVF_vect) {
   // check if we have an alarm set
   if (alarm_on && (time_s == 0) && (time_m == alarm_m) && (time_h == alarm_h)) {
     putstring_nl("ALARM!!!");
-    alarming = 1;
+    alarm_tripped = 1;
+  }
+  
+  //And wait till the score changes to actually set the alarm off.
+  if(!minute_changed && !hour_changed && alarm_tripped) {
+  	 alarming = 1;
+  	 alarm_tripped = 0;
   }
 
   if (t2divider2 == 6) {
