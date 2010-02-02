@@ -126,9 +126,11 @@
 
 #define SET_REG 104
 
+#define SET_BRT 105
+
 //DO NOT set EE_INITIALIZED to 0xFF / 255,  as that is
 //the state the eeprom will be in, when totally erased.
-#define EE_INITIALIZED 0xC2
+#define EE_INITIALIZED 0xC3
 #define EE_INIT 0
 #define EE_ALARM_HOUR 1
 #define EE_ALARM_MIN 2

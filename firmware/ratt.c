@@ -72,7 +72,7 @@ void init_eeprom(void) {	//Set eeprom to a default state.
   if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED) {
     eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
     eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
-    eeprom_write_byte((uint8_t *)EE_BRIGHT, 1);
+    eeprom_write_byte((uint8_t *)EE_BRIGHT, 120);
     eeprom_write_byte((uint8_t *)EE_VOLUME, 1);
     eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
     eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
@@ -121,10 +121,9 @@ int main(void) {
   //PORTD |= _BV(3);
   TCCR2A = _BV(COM2B1); // PWM output on pin D3
   TCCR2A |= _BV(WGM21) | _BV(WGM20); // fast PWM
-  TCCR2B = _BV(WGM22);
-  TCCR2B |= _BV(CS22) | _BV(CS21) | _BV(CS20);
-  OCR2A = 10;
-  OCR2B = 0; // 80% duty cycle
+  TCCR2B |= _BV(WGM22);
+  OCR2A = 128;
+  OCR2B = eeprom_read_byte((uint8_t *)EE_BRIGHT);
 
   DDRB |= _BV(5);
 
@@ -198,10 +197,6 @@ int main(void) {
 	  score_mode = SCORE_MODE_DATE;
 	  score_mode_timeout = 3;
 	  setscore();
-	  if(alarm_on)
-	  	  OCR2B++;
-	  else
-	  	  OCR2B--;
 	}
 
     if (just_pressed & 0x1) {
@@ -223,6 +218,10 @@ int main(void) {
       case SET_DATE:
 	displaymode = SET_REGION;
 	set_region();
+	break;
+	  case SET_REGION:
+	displaymode = SET_BRIGHTNESS;
+	set_backlight();
 	break;
       default:
 	displaymode = SHOW_TIME;
@@ -403,7 +402,7 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
 // runs at about 30 hz
 uint8_t t2divider1 = 0, t2divider2 = 0;
 SIGNAL (TIMER2_OVF_vect) {
-  if (t2divider1 == 5) {
+  if (t2divider1 == 10) {
     t2divider1 = 0;
   } else {
     t2divider1++;

@@ -82,6 +82,10 @@ void display_menu(void) {
     glcdPutStr("EU 24hr", NORMAL);
   }
   
+  glcdSetAddress(MENU_INDENT, 5);
+  glcdPutStr("Set Backlight: ", NORMAL);
+  printnumber(OCR2B>>2,NORMAL);
+  
   glcdSetAddress(0, 6);
   glcdPutStr("Press MENU to advance", NORMAL);
   glcdSetAddress(0, 7);
@@ -264,6 +268,90 @@ void set_date(void) {
 }
 
 
+void set_backlight(void) {
+  uint8_t mode = SET_BRIGHTNESS;
+
+  display_menu();
+  
+  screenmutex++;
+  glcdSetAddress(0, 6);
+  glcdPutStr("Press MENU to exit   ", NORMAL);
+
+  // put a small arrow next to 'set 12h/24h'
+  drawArrow(0, 43, MENU_INDENT -1);
+  screenmutex--;
+  
+  timeoutcounter = INACTIVITYTIMEOUT;  
+
+  while (1) {
+    if (just_pressed & 0x1) { // mode change
+      return;
+    }
+    if (just_pressed || pressed) {
+      timeoutcounter = INACTIVITYTIMEOUT;  
+      // timeout w/no buttons pressed after 3 seconds?
+    } else if (!timeoutcounter) {
+      //timed out!
+      displaymode = SHOW_TIME;     
+      return;
+    }
+  
+    if (just_pressed & 0x2) {
+      just_pressed = 0;
+      screenmutex++;
+
+      if (mode == SET_BRIGHTNESS) {
+	DEBUG(putstring("Setting backlight"));
+	// ok now its selected
+	mode = SET_BRT;
+	// print the region 
+	glcdSetAddress(MENU_INDENT + 15*6, 5);
+	printnumber(OCR2B>>2,INVERTED);
+	
+	// display instructions below
+	glcdSetAddress(0, 6);
+	glcdPutStr("Press + to change   ", NORMAL);
+	glcdSetAddress(0, 7);
+	glcdPutStr("Press SET to save   ", NORMAL);
+      } else {
+	mode = SET_BRIGHTNESS;
+	// print the region normal
+	glcdSetAddress(MENU_INDENT + 15*6, 5);
+	printnumber(OCR2B>>2,NORMAL);
+
+	glcdSetAddress(0, 6);
+	glcdPutStr("Press MENU to exit", NORMAL);
+	glcdSetAddress(0, 7);
+	glcdPutStr("Press SET to set   ", NORMAL);
+      }
+      screenmutex--;
+    }
+    if ((just_pressed & 0x4) || (pressed & 0x4)) {
+      just_pressed = 0;
+      
+      if (mode == SET_BRT) {
+	    OCR2B += 8;
+	    OCR2B &= 127;
+	screenmutex++;
+	display_menu();
+	glcdSetAddress(0, 6);
+	glcdPutStr("Press + to change    ", NORMAL);
+	glcdSetAddress(0, 7);
+	glcdPutStr("Press SET to save    ", NORMAL);
+
+	// put a small arrow next to 'set 12h/24h'
+	drawArrow(0, 43, MENU_INDENT -1);
+	glcdSetAddress(MENU_INDENT + 15*6, 5);
+	printnumber(OCR2B>>2,INVERTED);
+	
+	screenmutex--;
+
+	eeprom_write_byte((uint8_t *)EE_BRIGHT, OCR2B);
+      }
+    }
+  }
+}
+
 
 void set_region(void) {
   uint8_t mode = SET_REGION;
@@ -271,8 +359,6 @@ void set_region(void) {
   display_menu();
   
   screenmutex++;
-  glcdSetAddress(0, 6);
-  glcdPutStr("Press MENU to exit   ", NORMAL);
 
   // put a small arrow next to 'set 12h/24h'
   drawArrow(0, 35, MENU_INDENT -1);
