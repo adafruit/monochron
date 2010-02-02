@@ -121,9 +121,10 @@ int main(void) {
   //PORTD |= _BV(3);
   TCCR2A = _BV(COM2B1); // PWM output on pin D3
   TCCR2A |= _BV(WGM21) | _BV(WGM20); // fast PWM
-  TCCR2B |= _BV(WGM22);
+  TCCR2B = _BV(WGM22);
+  TCCR2B |= _BV(CS22) | _BV(CS21) | _BV(CS20);
   OCR2A = 10;
-  OCR2B = 2; // 80% duty cycle
+  OCR2B = 0; // 80% duty cycle
 
   DDRB |= _BV(5);
 
@@ -197,6 +198,10 @@ int main(void) {
 	  score_mode = SCORE_MODE_DATE;
 	  score_mode_timeout = 3;
 	  setscore();
+	  if(alarm_on)
+	  	  OCR2B++;
+	  else
+	  	  OCR2B--;
 	}
 
     if (just_pressed & 0x1) {
