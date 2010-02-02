@@ -119,11 +119,11 @@ int main(void) {
   // turn backlight on
   DDRD |= _BV(3);
   PORTD |= _BV(3);
-  //TCCR2A = _BV(COM2B1); // PWM output on pin D3
-  //TCCR2A |= _BV(WGM21) | _BV(WGM20); // fast PWM
-  //TCCR2B |= _BV(WGM22);
-  //OCR2A = 10;
-  //OCR2B = 8; // 80% duty cycle
+  /*TCCR2A = _BV(COM2B1); // PWM output on pin D3
+  TCCR2A |= _BV(WGM21) | _BV(WGM20); // fast PWM
+  TCCR2B |= _BV(WGM22);
+  OCR2A = 10;
+  OCR2B = 0; // 80% duty cycle*/
 
   DDRB |= _BV(5);
 
