@@ -84,7 +84,7 @@ void display_menu(void) {
   
   glcdSetAddress(MENU_INDENT, 5);
   glcdPutStr("Set Backlight: ", NORMAL);
-  printnumber(OCR2B>>2,NORMAL);
+  printnumber(OCR2B>>OCR2B_BITSHIFT,NORMAL);
   
   glcdSetAddress(0, 6);
   glcdPutStr("Press MENU to advance", NORMAL);
@@ -306,7 +306,7 @@ void set_backlight(void) {
 	mode = SET_BRT;
 	// print the region 
 	glcdSetAddress(MENU_INDENT + 15*6, 5);
-	printnumber(OCR2B>>2,INVERTED);
+	printnumber(OCR2B>>OCR2B_BITSHIFT,INVERTED);
 	
 	// display instructions below
 	glcdSetAddress(0, 6);
@@ -317,7 +317,7 @@ void set_backlight(void) {
 	mode = SET_BRIGHTNESS;
 	// print the region normal
 	glcdSetAddress(MENU_INDENT + 15*6, 5);
-	printnumber(OCR2B>>2,NORMAL);
+	printnumber(OCR2B>>OCR2B_BITSHIFT,NORMAL);
 
 	glcdSetAddress(0, 6);
 	glcdPutStr("Press MENU to exit", NORMAL);
@@ -330,8 +330,9 @@ void set_backlight(void) {
       just_pressed = 0;
       
       if (mode == SET_BRT) {
-	    OCR2B += 8;
-	    OCR2B &= 127;
+	    OCR2B += OCR2B_PLUS;
+	    if(OCR2B > OCR2A_VALUE)
+	      OCR2B = 0;
 	screenmutex++;
 	display_menu();
 	glcdSetAddress(0, 6);
@@ -342,7 +343,7 @@ void set_backlight(void) {
 	// put a small arrow next to 'set 12h/24h'
 	drawArrow(0, 43, MENU_INDENT -1);
 	glcdSetAddress(MENU_INDENT + 15*6, 5);
-	printnumber(OCR2B>>2,INVERTED);
+	printnumber(OCR2B>>OCR2B_BITSHIFT,INVERTED);
 	
 	screenmutex--;
 

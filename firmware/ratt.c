@@ -72,7 +72,7 @@ void init_eeprom(void) {	//Set eeprom to a default state.
   if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED) {
     eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
     eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
-    eeprom_write_byte((uint8_t *)EE_BRIGHT, 120);
+    eeprom_write_byte((uint8_t *)EE_BRIGHT, OCR2A_VALUE);
     eeprom_write_byte((uint8_t *)EE_VOLUME, 1);
     eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
     eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
@@ -122,7 +122,7 @@ int main(void) {
   TCCR2A = _BV(COM2B1); // PWM output on pin D3
   TCCR2A |= _BV(WGM21) | _BV(WGM20); // fast PWM
   TCCR2B |= _BV(WGM22);
-  OCR2A = 128;
+  OCR2A = OCR2A_VALUE;
   OCR2B = eeprom_read_byte((uint8_t *)EE_BRIGHT);
 
   DDRB |= _BV(5);
@@ -402,7 +402,7 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
 // runs at about 30 hz
 uint8_t t2divider1 = 0, t2divider2 = 0;
 SIGNAL (TIMER2_OVF_vect) {
-  if (t2divider1 == 10) {
+  if (t2divider1 == TIMER2_RETURN) {
     t2divider1 = 0;
   } else {
     t2divider1++;

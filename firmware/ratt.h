@@ -102,6 +102,15 @@
 #define TIME_12H 0
 #define TIME_24H 1
 
+//Contstants for calcualting the Timer2 interrupt return rate.
+//Desired rate, is to have the i2ctime read out about 6 times
+//a second, and a few other values about once a second.
+#define OCR2B_BITSHIFT 0
+#define OCR2B_PLUS 1
+#define OCR2A_VALUE 16
+#define TIMER2_RETURN 80
+//#define TIMER2_RETURN (8000000 / (OCR2A_VALUE * 1024 * 6))
+
 // displaymode
 #define NONE 99
 #define SHOW_TIME 0
@@ -157,6 +166,7 @@ void set_alarm(void);
 void set_time(void);
 void set_region(void);
 void set_date(void);
+void set_backlight(void);
 void print_timehour(uint8_t h, uint8_t inverted);
 void print_alarmhour(uint8_t h, uint8_t inverted);
 void display_menu(void);
