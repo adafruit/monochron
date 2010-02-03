@@ -96,7 +96,6 @@ void display_menu(void) {
   screenmutex--;
 }
 
-
 void set_date(void) {
   uint8_t mode = SET_DATE;
   uint8_t day, month, year;
@@ -239,21 +238,50 @@ void set_date(void) {
 	month++;
 	if (month >= 13)
 	  month = 1;
-	if (region == REGION_US) 
-	  glcdSetAddress(MENU_INDENT + 12*6, 3);
-	else
-	  glcdSetAddress(MENU_INDENT + 15*6, 3);
-	printnumber(month, INVERTED);
+	if(month == 2) {
+	  if(leapyear(year) && (day > 29))
+	  	day = 29;
+	  else if (!leapyear(year) && (day > 28))
+	  	day = 28;
+	} else if ((month == 4) || (month == 6) || (month == 9) || (month == 11)) {
+      if(day > 30)
+      	day = 30;
+	}
+	glcdSetAddress(MENU_INDENT + 12*6, 3);
+	if (region == REGION_US) {
+	  printnumber(month, INVERTED);
+	  glcdWriteChar('/', NORMAL);
+	  printnumber(day, NORMAL);
+	} else {
+	  printnumber(day, NORMAL);
+	  glcdWriteChar('/', NORMAL);
+	  printnumber(month, INVERTED);
+	}
+	
       }
       if (mode == SET_DAY) {
 	day++;
 	if (day > 31)
 	  day = 1;
-	if (region == REGION_US) 
-	  glcdSetAddress(MENU_INDENT + 15*6, 3);
-	else
-	  glcdSetAddress(MENU_INDENT + 12*6, 3);
-	printnumber(day, INVERTED);
+	if(month == 2) {
+	  if(leapyear(year) && (day > 29))
+	  	day = 1;
+	  else if (!leapyear(year) && (day > 28))
+	  	day = 1;
+	} else if ((month == 4) || (month == 6) || (month == 9) || (month == 11)) {
+      if(day > 30)
+      	day = 1;
+	}
+	glcdSetAddress(MENU_INDENT + 12*6, 3);
+	if (region == REGION_US) {
+	  printnumber(month, NORMAL);
+	  glcdWriteChar('/', NORMAL);
+	  printnumber(day, INVERTED);
+	} else {
+	  printnumber(day, INVERTED);
+	  glcdWriteChar('/', NORMAL);
+	  printnumber(month, NORMAL);
+	}
       }
       if (mode == SET_YEAR) {
 	year = (year+1) % 100;
