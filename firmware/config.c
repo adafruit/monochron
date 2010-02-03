@@ -82,9 +82,11 @@ void display_menu(void) {
     glcdPutStr("EU 24hr", NORMAL);
   }
   
+#ifdef BACKLIGHT_ADJUST
   glcdSetAddress(MENU_INDENT, 5);
   glcdPutStr("Set Backlight: ", NORMAL);
   printnumber(OCR2B>>OCR2B_BITSHIFT,NORMAL);
+#endif
   
   glcdSetAddress(0, 6);
   glcdPutStr("Press MENU to advance", NORMAL);
@@ -267,7 +269,7 @@ void set_date(void) {
 
 }
 
-
+#ifdef BACKLIGHT_ADJUST
 void set_backlight(void) {
   uint8_t mode = SET_BRIGHTNESS;
 
@@ -352,6 +354,7 @@ void set_backlight(void) {
     }
   }
 }
+#endif
 
 
 void set_region(void) {
@@ -360,6 +363,11 @@ void set_region(void) {
   display_menu();
   
   screenmutex++;
+  
+#ifndef BACKLIGHT_ADJUST
+  glcdSetAddress(0, 6);
+  glcdPutStr("Press MENU to exit   ", NORMAL);
+#endif
 
   // put a small arrow next to 'set 12h/24h'
   drawArrow(0, 35, MENU_INDENT -1);

@@ -118,12 +118,15 @@ int main(void) {
 
   // turn backlight on
   DDRD |= _BV(3);
-  //PORTD |= _BV(3);
+#ifndef BACKLIGHT_ADJUST
+  PORTD |= _BV(3);
+#else
   TCCR2A = _BV(COM2B1); // PWM output on pin D3
   TCCR2A |= _BV(WGM21) | _BV(WGM20); // fast PWM
   TCCR2B |= _BV(WGM22);
   OCR2A = OCR2A_VALUE;
   OCR2B = eeprom_read_byte((uint8_t *)EE_BRIGHT);
+#endif
 
   DDRB |= _BV(5);
 
@@ -219,10 +222,12 @@ int main(void) {
 	displaymode = SET_REGION;
 	set_region();
 	break;
+#ifdef BACKLIGHT_ADJUST
 	  case SET_REGION:
 	displaymode = SET_BRIGHTNESS;
 	set_backlight();
 	break;
+#endif
       default:
 	displaymode = SHOW_TIME;
 	glcdClearScreen();
@@ -402,7 +407,11 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
 // runs at about 30 hz
 uint8_t t2divider1 = 0, t2divider2 = 0;
 SIGNAL (TIMER2_OVF_vect) {
+#ifdef BACKLIGHT_ADJUST
   if (t2divider1 == TIMER2_RETURN) {
+#else
+  if (t2divider1 == 5) {
+#endif
     t2divider1 = 0;
   } else {
     t2divider1++;
