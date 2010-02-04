@@ -3,6 +3,7 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <string.h>
 #include <i2c.h>
 #include <stdlib.h>
@@ -89,6 +90,12 @@ int main(void) {
   // check if we were reset
   mcustate = MCUSR;
   MCUSR = 0;
+  
+  //Just in case we were reset inside of the glcd init function
+  //which would happen if the lcd is not plugged in. The end result
+  //of that, is it will beep, pause, for as long as there is no lcd
+  //plugged in.
+  wdt_disable();
 
   // setup uart
   uart_init(BRRL_192);
@@ -100,7 +107,7 @@ int main(void) {
   DEBUGP("clock!");
   clock_init();
 
-  beep(4000, 100);
+  //beep(4000, 100);
 
   init_eeprom();
   region = eeprom_read_byte((uint8_t *)EE_REGION);
@@ -129,8 +136,16 @@ int main(void) {
 #endif
 
   DDRB |= _BV(5);
-
+  beep(4000, 100);
+  
+  //glcdInit locks and disables interrupts in one of its functions.  If the LCD is not
+  //plugged in, glcd will run forever.  For good reason, it would be desirable to know
+  //that the LCD is plugged in and working correctly as a result.  This is why we are
+  //using a watch dog timer.  The lcd should initialized in way less than 500 ms.
+  wdt_enable(WDTO_500MS);
   glcdInit();
+  wdt_disable();
+  
   glcdClearScreen();
   
 
