@@ -144,10 +144,7 @@ int main(void) {
   //using a watch dog timer.  The lcd should initialized in way less than 500 ms.
   wdt_enable(WDTO_500MS);
   glcdInit();
-  wdt_disable();
-  
   glcdClearScreen();
-  
 
    /*
   for (uint8_t f=0; f<64; f++) {
@@ -422,6 +419,7 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
 // runs at about 30 hz
 uint8_t t2divider1 = 0, t2divider2 = 0;
 SIGNAL (TIMER2_OVF_vect) {
+  wdt_reset();
 #ifdef BACKLIGHT_ADJUST
   if (t2divider1 == TIMER2_RETURN) {
 #else
