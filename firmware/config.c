@@ -437,9 +437,9 @@ void set_region(void) {
 	}
 	// display instructions below
 	glcdSetAddress(0, 6);
-	glcdPutStr("Press + to change   ", NORMAL);
+	glcdPutStr("Press + to change    ", NORMAL);
 	glcdSetAddress(0, 7);
-	glcdPutStr("Press SET to save   ", NORMAL);
+	glcdPutStr("Press SET to save    ", NORMAL);
       } else {
 	mode = SET_REGION;
 	// print the region normal
@@ -455,9 +455,13 @@ void set_region(void) {
 	}
 
 	glcdSetAddress(0, 6);
-	glcdPutStr("Press MENU to exit", NORMAL);
+#ifdef BACKLIGHT_ADJUST
+	glcdPutStr("Press MENU to advance", NORMAL);
+#else
+	glcdPutStr("Press MENU to exit   ", NORMAL);
+#endif
 	glcdSetAddress(0, 7);
-	glcdPutStr("Press SET to set   ", NORMAL);
+	glcdPutStr("Press SET to set     ", NORMAL);
       }
       screenmutex--;
     }
