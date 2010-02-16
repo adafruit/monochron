@@ -22,7 +22,7 @@ PROGRAM    = ATmegaBOOT_168
 # enter the parameters for the avrdude isp tool
 ISPTOOL	   = usbtiny
 ISPPORT	   = usb
-ISPSPEED   = -B 1
+ISPSPEED   = -B 10
 
 MCU_TARGET = atmega168
 LDSECTION  = --section-start=.text=0x3800
