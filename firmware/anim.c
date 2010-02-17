@@ -3,6 +3,7 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -34,6 +35,77 @@ extern volatile uint8_t minute_changed, hour_changed;
 
 uint8_t redraw_time = 0;
 uint8_t last_score_mode = 0;
+
+uint32_t rval[2]={0,0};
+uint32_t key[4]={
+	0x2DE9716E,0x993FDDD1,0x2A77FB57,0xB172E6B0
+};
+
+void encipher(void) {
+    unsigned int i;
+    uint32_t v0=rval[0], v1=rval[1], sum=0, delta=0x9E3779B9;
+    for (i=0; i < 32; i++) {
+        v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
+        sum += delta;
+        v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
+    }
+    rval[0]=v0; rval[1]=v1;
+}
+
+uint16_t crand(void) {
+  if((rval[0]==0)&&(rval[1]==0)){
+  	//Just powered on, clock was never previously turned on,
+  	//or we reset the time manually.
+  	wdt_reset();
+  	encipher();
+  	wdt_reset();
+  	rval[0] = alarm_h;
+  	rval[0]<<=8;
+  	rval[0]|=time_h;
+  	rval[0]<<=8;
+  	rval[0]|=time_m;
+  	rval[0]<<=8;
+  	rval[0]|=time_s;
+  	key[0]^=rval[0];
+  	encipher();
+  	wdt_reset();
+  	key[1]^=rval[0]<<1;
+  	encipher();
+  	wdt_reset();
+  	key[2]^=rval[0]>>1;
+  	encipher();
+  	wdt_reset();
+  	key[3]^=rval[1];
+  	encipher();
+  	wdt_reset();
+  	rval[0] = alarm_m;
+  	rval[0]<<=8;
+  	rval[0]|=time_h;
+  	rval[0]<<=8;
+  	rval[0]|=time_m;
+  	rval[0]<<=8;
+  	rval[0]|=time_s;
+  	key[3]^=rval[0];
+  	encipher();
+  	wdt_reset();
+  	key[1]^=rval[0]>>1;
+  	encipher();
+  	wdt_reset();
+  	key[2]^=rval[0]<<1;
+  	encipher();
+  	wdt_reset();
+  	key[3]^=rval[1];
+  	rval[0]=0;
+  	rval[1]=0;
+  	encipher();
+  }
+  else
+  {
+  	wdt_reset();
+  	encipher();
+  }
+  return rval[0]&RAND_MAX;
+}
 
 void setscore(void)
 {
@@ -69,8 +141,10 @@ void setscore(void)
       right_score = date_y;
       break;
     case SCORE_MODE_ALARM:
-      left_score = alarm_h;
-      right_score = alarm_m;
+      //left_score = alarm_h;
+      //right_score = alarm_m;
+      left_score = key[1];
+      right_score = key[2];
       break;
   }
 }
@@ -87,8 +161,9 @@ void initanim(void) {
 
   ball_x = (SCREEN_W / 2) - 1;
   ball_y = (SCREEN_H / 2) - 1;
-  ball_dx = -4;
-  ball_dy = -4;
+  float angle = random_angle_rads();
+  ball_dx = MAX_BALL_SPEED * cos(angle);
+  ball_dy = MAX_BALL_SPEED * sin(angle);
 }
 
 void initdisplay(uint8_t inverted) {
@@ -295,7 +370,7 @@ void step(void) {
 	  right_dest = right_keepout_top - PADDLE_H - 1;
 	} else {
 	  //DEBUG(putstring_nl("in the middle"));
-	  if ( ((uint8_t)rand()) & 0x1)
+	  if ( ((uint8_t)crand()) & 0x1)
 	    right_dest = right_keepout_top - PADDLE_H - 1;
 	  else
 	    right_dest = right_keepout_bot + 1;
@@ -410,7 +485,7 @@ void step(void) {
 	  left_dest = left_keepout_top - PADDLE_H - 1;
 	} else {
 	  DEBUG(putstring_nl("in the middle"));
-	  if ( ((uint8_t)rand()) & 0x1)
+	  if ( ((uint8_t)crand()) & 0x1)
 	    left_dest = left_keepout_top - PADDLE_H - 1;
 	  else
 	    left_dest = left_keepout_bot + 1;
@@ -618,14 +693,14 @@ void drawbigdigit(uint8_t x, uint8_t y, uint8_t n, uint8_t inverted) {
 
 float random_angle_rads(void) {
    // create random vector MEME seed it ok???
-    float angle = rand();
+    float angle = crand();
 
     //angle = 31930; // MEME DEBUG
     if(DEBUGGING){putstring("\n\rrand = "); uart_putw_dec(angle);}
     angle = (angle * (90.0 - MIN_BALL_ANGLE*2)  / RAND_MAX) + MIN_BALL_ANGLE;
 
     //pick the quadrant
-    uint8_t quadrant = (rand() >> 8) % 4; 
+    uint8_t quadrant = (crand() >> 8) % 4; 
     //quadrant = 2; // MEME DEBUG
 
     if(DEBUGGING){putstring(" quad = "); uart_putw_dec(quadrant);}

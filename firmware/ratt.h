@@ -6,7 +6,7 @@
 
 // Software options. Uncomment to enable.
 //BACKLIGHT_ADJUST - Allows software control of backlight, assuming you mounted your 100ohm resistor in R21.
-//#define BACKLIGHT_ADJUST 1
+#define BACKLIGHT_ADJUST 1
 
 // This is a tradeoff between sluggish and too fast to see
 #define MAX_BALL_SPEED 5 // note this is in vector arith.
