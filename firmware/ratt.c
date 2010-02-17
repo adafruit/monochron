@@ -482,7 +482,8 @@ SIGNAL (TIMER2_OVF_vect) {
 
   if (((displaymode == SET_ALARM) ||
        (displaymode == SET_DATE) ||
-       (displaymode == SET_REGION)) &&
+       (displaymode == SET_REGION) ||
+       (displaymode == SET_BRIGHTNESS)) &&
       (!screenmutex) ) {
       glcdSetAddress(MENU_INDENT + 10*6, 2);
       print_timehour(time_h, NORMAL);
