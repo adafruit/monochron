@@ -106,7 +106,7 @@ int main(void) {
 
   DEBUGP("clock!");
   clock_init();
-
+  init_crand();	//Initialize the seed based upon current time.  Very first value discarded.
   //beep(4000, 100);
 
   init_eeprom();

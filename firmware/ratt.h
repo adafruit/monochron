@@ -188,6 +188,8 @@ void drawmidline(uint8_t inverted);
 
 float random_angle_rads(void);
 
+void init_crand();
+
 uint8_t i2bcd(uint8_t x);
 
 uint8_t readi2ctime(void);

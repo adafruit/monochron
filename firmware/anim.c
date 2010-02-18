@@ -37,67 +37,65 @@ uint8_t redraw_time = 0;
 uint8_t last_score_mode = 0;
 
 uint32_t rval[2]={0,0};
-uint32_t key[4]={
-	0x2DE9716E,0x993FDDD1,0x2A77FB57,0xB172E6B0
-};
+uint32_t key[4];
 
-void encipher(void) {
-    unsigned int i;
-    uint32_t v0=rval[0], v1=rval[1], sum=0, delta=0x9E3779B9;
-    for (i=0; i < 32; i++) {
-        v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
-        sum += delta;
-        v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
-    }
-    rval[0]=v0; rval[1]=v1;
+void encipher(void) {  // Using 32 rounds of XTea encryption as a PRNG.
+  unsigned int i;
+  uint32_t v0=rval[0], v1=rval[1], sum=0, delta=0x9E3779B9;
+  for (i=0; i < 32; i++) {
+    v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
+    sum += delta;
+    v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
+  }
+  rval[0]=v0; rval[1]=v1;
+}
+
+void init_crand() {
+  uint32_t temp;
+  key[0]=0x2DE9716E;  //Initial XTEA key. Grabbed from the first 16 bytes
+  key[1]=0x993FDDD1;  //of grc.com/password.  1 in 2^128 chance of seeing
+  key[2]=0x2A77FB57;  //that key again there.
+  key[3]=0xB172E6B0;
+  rval[0]=0;
+  rval[1]=0;
+  encipher();
+  temp = alarm_h;
+  temp<<=8;
+  temp|=time_h;
+  temp<<=8;
+  temp|=time_m;
+  temp<<=8;
+  temp|=time_s;
+  key[0]^=rval[1]<<1;
+  encipher();
+  key[1]^=temp<<1;
+  encipher();
+  key[2]^=temp>>1;
+  encipher();
+  key[3]^=rval[1]>>1;
+  encipher();
+  temp = alarm_m;
+  temp<<=8;
+  temp|=date_m;
+  temp<<=8;
+  temp|=date_d;
+  temp<<=8;
+  temp|=date_y;
+  key[0]^=temp<<1;
+  encipher();
+  key[1]^=rval[0]<<1;
+  encipher();
+  key[2]^=rval[0]>>1;
+  encipher();
+  key[3]^=temp>>1;
+  rval[0]=0;
+  rval[1]=0;
+  encipher();	//And at this point, the PRNG is now seeded, based on power on/date/time reset.
 }
 
 uint16_t crand(void) {
   if((rval[0]==0)&&(rval[1]==0)){
-  	//Just powered on, clock was never previously turned on,
-  	//or we reset the time manually.
-  	wdt_reset();
-  	encipher();
-  	wdt_reset();
-  	rval[0] = alarm_h;
-  	rval[0]<<=8;
-  	rval[0]|=time_h;
-  	rval[0]<<=8;
-  	rval[0]|=time_m;
-  	rval[0]<<=8;
-  	rval[0]|=time_s;
-  	key[0]^=rval[0];
-  	encipher();
-  	wdt_reset();
-  	key[1]^=rval[0]<<1;
-  	encipher();
-  	wdt_reset();
-  	key[2]^=rval[0]>>1;
-  	encipher();
-  	wdt_reset();
-  	key[3]^=rval[1];
-  	encipher();
-  	wdt_reset();
-  	rval[0] = alarm_m;
-  	rval[0]<<=8;
-  	rval[0]|=time_h;
-  	rval[0]<<=8;
-  	rval[0]|=time_m;
-  	rval[0]<<=8;
-  	rval[0]|=time_s;
-  	key[3]^=rval[0];
-  	encipher();
-  	wdt_reset();
-  	key[1]^=rval[0]>>1;
-  	encipher();
-  	wdt_reset();
-  	key[2]^=rval[0]<<1;
-  	encipher();
-  	wdt_reset();
-  	key[3]^=rval[1];
-  	rval[0]=0;
-  	rval[1]=0;
-  	encipher();
+  	init_crand();
   }
   else
   {
