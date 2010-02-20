@@ -22,7 +22,7 @@ PROGRAM    = ATmegaBOOT_168
 # enter the parameters for the avrdude isp tool
 ISPTOOL	   = usbtiny
 ISPPORT	   = usb
-ISPSPEED   = -B 10
+ISPSPEED   = -B 1
 
 MCU_TARGET = atmega168
 LDSECTION  = --section-start=.text=0x3800
@@ -168,7 +168,7 @@ atmega328_isp: isp
 
 atmega328_pro8: TARGET = atmega328_pro_8MHz
 atmega328_pro8: MCU_TARGET = atmega328p
-atmega328_pro8: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=1' -DBAUD_RATE=57600 -DDOUBLE_SPEED
+atmega328_pro8: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>3' '-DNUM_LED_FLASHES=1' -DBAUD_RATE=57600 -DDOUBLE_SPEED 
 atmega328_pro8: AVR_FREQ = 8000000L 
 atmega328_pro8: LDSECTION  = --section-start=.text=0x7800
 atmega328_pro8: $(PROGRAM)_atmega328_pro_8MHz.hex
@@ -229,4 +229,3 @@ clean:
 
 %.bin: %.elf
 	$(OBJCOPY) -j .text -j .data -O binary $< $@
-	

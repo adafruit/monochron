@@ -641,7 +641,7 @@ void set_time(void) {
 	glcdSetAddress(MENU_INDENT + 18*6, 2);
 	if (time_format == TIME_12H) {
 	  glcdWriteChar(' ', NORMAL);
-	  if (time_h >= 12) {
+	  if (hour >= 12) {
 	    glcdWriteChar('P', INVERTED);
 	  } else {
 	    glcdWriteChar('A', INVERTED);
@@ -671,7 +671,7 @@ void set_time(void) {
 	glcdSetAddress(MENU_INDENT + 18*6, 2);
 	if (time_format == TIME_12H) {
 	  glcdWriteChar(' ', NORMAL);
-	  if (time_h >= 12) {
+	  if (hour >= 12) {
 	    glcdWriteChar('P', NORMAL);
 	  } else {
 	    glcdWriteChar('A', NORMAL);

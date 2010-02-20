@@ -139,10 +139,10 @@
 /* other boards like e.g. Crumb8, Crumb168 are using PB2 */
 
  // MONOCHRON MOD
-#define LED_DDR  DDRC
-#define LED_PORT PORTC
-#define LED_PIN  PINC
-#define LED      PINC3
+#define LED_DDR  DDRD
+#define LED_PORT PORTD
+#define LED_PIN  PIND
+#define LED      PIND3
 #endif
 
 
@@ -278,12 +278,12 @@ int main(void)
 	uint8_t ch,ch2;
 	uint16_t w;
 
+	WDTCSR |= _BV(WDCE) | _BV(WDE);
+	WDTCSR = 0;
+
 #ifdef WATCHDOG_MODS
 	ch = MCUSR;
 	MCUSR = 0;
-
-	WDTCSR |= _BV(WDCE) | _BV(WDE);
-	WDTCSR = 0;
 
 	// Check if the WDT was used to reset, in which case we dont bootload and skip straight to the code. woot.
 	if (! (ch &  _BV(EXTRF))) // if its a not an external reset...
