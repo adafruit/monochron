@@ -93,16 +93,17 @@ void init_crand() {
   encipher();	//And at this point, the PRNG is now seeded, based on power on/date/time reset.
 }
 
-uint16_t crand(void) {
-  if((rval[0]==0)&&(rval[1]==0)){
-  	init_crand();
-  }
-  else
+uint16_t crand(uint8_t type) {
+  if((type==0)||(type>2))
   {
-  	wdt_reset();
-  	encipher();
+    wdt_reset();
+    encipher();
+    return (rval[0]^rval[1])&RAND_MAX;
+  } else if (type==1) {
+  	return ((rval[0]^rval[1])>>15)&3;
+  } else if (type==2) {
+  	return ((rval[0]^rval[1])>>17)&1;
   }
-  return rval[0]&RAND_MAX;
 }
 
 void setscore(void)
@@ -366,7 +367,7 @@ void step(void) {
 	  right_dest = right_keepout_top - PADDLE_H - 1;
 	} else {
 	  //DEBUG(putstring_nl("in the middle"));
-	  if ( ((uint8_t)crand()) & 0x1)
+	  if ( ((uint8_t)crand(2)) & 0x1)
 	    right_dest = right_keepout_top - PADDLE_H - 1;
 	  else
 	    right_dest = right_keepout_bot + 1;
@@ -481,7 +482,7 @@ void step(void) {
 	  left_dest = left_keepout_top - PADDLE_H - 1;
 	} else {
 	  DEBUG(putstring_nl("in the middle"));
-	  if ( ((uint8_t)crand()) & 0x1)
+	  if ( ((uint8_t)crand(2)) & 0x1)
 	    left_dest = left_keepout_top - PADDLE_H - 1;
 	  else
 	    left_dest = left_keepout_bot + 1;
@@ -697,14 +698,14 @@ void drawbigdigit(uint8_t x, uint8_t y, uint8_t n, uint8_t inverted) {
 
 float random_angle_rads(void) {
    // create random vector MEME seed it ok???
-    float angle = crand();
+    float angle = crand(0);
 
     //angle = 31930; // MEME DEBUG
     if(DEBUGGING){putstring("\n\rrand = "); uart_putw_dec(angle);}
     angle = (angle * (90.0 - MIN_BALL_ANGLE*2)  / RAND_MAX) + MIN_BALL_ANGLE;
 
     //pick the quadrant
-    uint8_t quadrant = (crand() >> 8) % 4; 
+    uint8_t quadrant = (crand(1)) % 4; 
     //quadrant = 2; // MEME DEBUG
 
     if(DEBUGGING){putstring(" quad = "); uart_putw_dec(quadrant);}
