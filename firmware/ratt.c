@@ -142,49 +142,13 @@ int main(void) {
   //plugged in, glcd will run forever.  For good reason, it would be desirable to know
   //that the LCD is plugged in and working correctly as a result.  This is why we are
   //using a watch dog timer.  The lcd should initialized in way less than 500 ms.
-  wdt_enable(WDTO_500MS);
+  wdt_enable(WDTO_2S);
   glcdInit();
   glcdClearScreen();
-
-   /*
-  for (uint8_t f=0; f<64; f++) {
-    for (uint8_t g=0; g+f < 64; g++) {
-      glcdClearScreen();
-      glcdFillRectangle(0, f, 8, g, ON);
-      _delay_ms(100);
-      DEBUG(putstring("\n\rg = "));
-      DEBUG(uart_putw_dec(g));
-    }
-  }
-  halt();
-  */
 
   initanim();
   initdisplay(0);
 
-
-  /*
-  while (1) {
-    uint16_t x,  y;
-    
-    for (x = 60; x < GLCD_XPIXELS; x++) {
-      for (y = 0; y < GLCD_YPIXELS; y++) {
-	glcdSetDot(x, y);
-	_delay_ms(10);
-      }
-      
-    } 
-    for (x = 0; x < GLCD_XPIXELS-1; x++) {
-      for (y = 0; y < GLCD_YPIXELS-1; y++) {
-	glcdClearDot(x, y);
-	_delay_ms(10);
-      }
-    }
-
-    halt();
-  }
-  */
-  
   while (1) {
     animticker = ANIMTICK_MS;
 
@@ -269,7 +233,7 @@ int main(void) {
   }
   
     while (animticker);
-    //uart_getchar();
+    //uart_getchar();  // you would uncomment this so you can manually 'step'
   }
 
   halt();
