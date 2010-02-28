@@ -27,6 +27,7 @@ extern volatile uint8_t screenmutex;
 volatile uint8_t minute_changed = 0, hour_changed = 0;
 volatile uint8_t score_mode_timeout = 0;
 volatile uint8_t score_mode = SCORE_MODE_TIME;
+volatile uint8_t last_score_mode;
 
 // These store the current button states for all 3 buttons. We can 
 // then query whether the buttons are pressed and released or pressed
@@ -158,13 +159,58 @@ int main(void) {
 	  just_pressed = 0;
 	  setsnooze();
 	}
-	if(display_date && !score_mode_timeout)
+	if(display_date==1 && !score_mode_timeout)
+	{
+		display_date=3;
+		score_mode = SCORE_MODE_DATELONG;
+	    score_mode_timeout = 3;
+	    setscore();
+	}
+	else if(display_date==2 && !score_mode_timeout)
+	{
+		display_date=3;
+		score_mode = SCORE_MODE_DATE;
+	    score_mode_timeout = 3;
+	    setscore();
+	}
+	else if(display_date==3 && !score_mode_timeout)
+	{
+		display_date=0;
+		score_mode = SCORE_MODE_YEAR;
+	    score_mode_timeout = 3;
+	    setscore();
+	}
+	/*if(display_date && !score_mode_timeout)
+	{
+	  if(last_score_mode == SCORE_MODE_DATELONG)
+	  {
+	    score_mode = SCORE_MODE_DOW;
+	    score_mode_timeout = 3;
+	    setscore();
+	  }
+	  
+	  else if(last_score_mode == SCORE_MODE_DOW)
+	  {
+	    score_mode = SCORE_MODE_DATE;
+	    score_mode_timeout = 3;
+	    setscore();
+	  }
+	  else if(last_score_mode == SCORE_MODE_DATE)
+	  {
+	    score_mode = SCORE_MODE_YEAR;
+	    score_mode_timeout = 3;
+	    setscore();
+	    display_date = 0;
+	  }
+	  
+	}*/
+	/*if(display_date && !score_mode_timeout)
 	{
 	  score_mode = SCORE_MODE_YEAR;
 	  score_mode_timeout = 3;
 	  setscore();
 	  display_date = 0;
-	}
+	}*/
 
     //Was formally set for just the + button.  However, because the Set button was never
     //accounted for, If the alarm was turned on, and ONLY the set button was pushed since then,
@@ -172,14 +218,32 @@ int main(void) {
     //This could potentially make you late for work, and had to be fixed.
 	if (just_pressed & 0x6) {
 	  just_pressed = 0;
-	  display_date = 1;
-	  score_mode = SCORE_MODE_DATE;
+	  if((region == REGION_US) || (region == REGION_EU)) {
+	  	display_date = 3;
+	  	score_mode = SCORE_MODE_DATE;
+	  }
+	  else if ((region == DOW_REGION_US) || (region == DOW_REGION_EU)) {
+	  	display_date = 2;
+	  	score_mode = SCORE_MODE_DOW;
+	  }
+	  else if (region == DATELONG) {
+	  	display_date = 3;
+	  	score_mode = SCORE_MODE_DATELONG;
+	  }
+	  else {
+	  	display_date = 1;
+	  	score_mode = SCORE_MODE_DOW;
+	  }
 	  score_mode_timeout = 3;
 	  setscore();
 	}
 
     if (just_pressed & 0x1) {
       just_pressed = 0;
+      display_date = 0;
+      score_mode = SCORE_MODE_TIME;
+      score_mode_timeout = 0;
+      setscore();
       switch(displaymode) {
       case (SHOW_TIME):
 	displaymode = SET_ALARM;
@@ -419,6 +483,7 @@ SIGNAL (TIMER2_OVF_vect) {
     if(score_mode_timeout) {
 	  score_mode_timeout--;
 	  if(!score_mode_timeout) {
+	  	last_score_mode = score_mode;
 	    score_mode = SCORE_MODE_TIME;
 	    if(hour_changed) {
 	      time_h = old_h;

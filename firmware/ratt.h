@@ -41,6 +41,17 @@
 #define DISPLAY_M10_X 70
 #define DISPLAY_M1_X 85
 
+#define DISPLAY_DOW1_X 35
+#define DISPLAY_DOW2_X 50
+#define DISPLAY_DOW3_X 70
+
+#define DISPLAY_MON1_X 20
+#define DISPLAY_MON2_X 35
+#define DISPLAY_MON3_X 50
+
+#define DISPLAY_DAY10_X 70
+#define DISPLAY_DAY1_X 85
+
 // buffer space from the top
 #define DISPLAY_TIME_Y 4
 
@@ -99,10 +110,16 @@
 #define SCORE_MODE_DATE 1
 #define SCORE_MODE_YEAR 2
 #define SCORE_MODE_ALARM 3
+#define SCORE_MODE_DOW 4
+#define SCORE_MODE_DATELONG 5
 
 // Constants for how to display time & date
 #define REGION_US 0
 #define REGION_EU 1
+#define DOW_REGION_US 2
+#define DOW_REGION_EU 3
+#define DATELONG 4
+#define DATELONG_DOW 5
 #define TIME_12H 0
 #define TIME_24H 1
 
@@ -189,6 +206,7 @@ void drawmidline(uint8_t inverted);
 float random_angle_rads(void);
 
 void init_crand();
+uint8_t dotw(uint8_t mon, uint8_t day, uint8_t yr);
 
 uint8_t i2bcd(uint8_t x);
 
