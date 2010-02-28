@@ -77,40 +77,40 @@ void print_month(uint8_t inverted, uint8_t month) {
   switch(month)
   {
   	case 1:
-  	  glcdPutStr("Jan ", inverted);
+  	  glcdPutStr("Jan", inverted);
   	  break;
   	case 2:
-  	  glcdPutStr("Feb ", inverted);
+  	  glcdPutStr("Feb", inverted);
   	  break;
   	case 3:
-  	  glcdPutStr("Mar ", inverted);
+  	  glcdPutStr("Mar", inverted);
   	  break;
   	case 4:
-  	  glcdPutStr("Apr ", inverted);
+  	  glcdPutStr("Apr", inverted);
   	  break;
   	case 5:
-  	  glcdPutStr("May ", inverted);
+  	  glcdPutStr("May", inverted);
   	  break;
   	case 6:
-  	  glcdPutStr("Jun ", inverted);
+  	  glcdPutStr("Jun", inverted);
   	  break;
   	case 7:
-  	  glcdPutStr("Jul ", inverted);
+  	  glcdPutStr("Jul", inverted);
   	  break;
   	case 8:
-  	  glcdPutStr("Aug ", inverted);
+  	  glcdPutStr("Aug", inverted);
   	  break;
   	case 9:
-  	  glcdPutStr("Sep ", inverted);
+  	  glcdPutStr("Sep", inverted);
   	  break;
   	case 10:
-  	  glcdPutStr("Oct ", inverted);
+  	  glcdPutStr("Oct", inverted);
   	  break;
   	case 11:
-  	  glcdPutStr("Nov ", inverted);
+  	  glcdPutStr("Nov", inverted);
   	  break;
   	case 12:
-  	  glcdPutStr("Dec ", inverted);
+  	  glcdPutStr("Dec", inverted);
   	  break;
   }
 }
@@ -144,46 +144,48 @@ void print_dow(uint8_t inverted, uint8_t mon, uint8_t day, uint8_t yr) {
 
 void print_date(uint8_t month, uint8_t day, uint8_t year, uint8_t mode) {
   glcdSetAddress(MENU_INDENT, 3);
-  glcdPutStr("Date: ", NORMAL);
+  glcdPutStr("Date:", NORMAL);
   if (region == REGION_US) {
-  	glcdPutStr("      ",NORMAL);
+  	glcdPutStr("     ",NORMAL);
     printnumber(month, (mode == SET_MONTH)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
     printnumber(day, (mode == SET_DAY)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
   } else if (region == REGION_EU) {
-  	glcdPutStr("      ",NORMAL);
+  	glcdPutStr("     ",NORMAL);
     printnumber(day, (mode == SET_DAY)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
     printnumber(month, (mode == SET_MONTH)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
   } else if ( region == DOW_REGION_US) {
-  	glcdPutStr("  ",NORMAL);
+  	glcdWriteChar(' ', NORMAL);
   	print_dow(NORMAL,month,day,year);
   	printnumber(month, (mode == SET_MONTH)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
     printnumber(day, (mode == SET_DAY)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
   } else if ( region == DOW_REGION_EU) {
-  	glcdPutStr("  ",NORMAL);
+  	glcdWriteChar(' ', NORMAL);
   	print_dow(NORMAL,month,day,year);
   	printnumber(day, (mode == SET_DAY)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
     printnumber(month, (mode == SET_MONTH)?INVERTED:NORMAL);
     glcdWriteChar('/', NORMAL);
   } else if ( region == DATELONG) {
-  	glcdPutStr("    ",NORMAL);
+  	glcdPutStr("   ",NORMAL);
   	print_month((mode == SET_MONTH)?INVERTED:NORMAL,month);
+  	glcdWriteChar(' ', NORMAL);
   	printnumber(day, (mode == SET_DAY)?INVERTED:NORMAL);
   	glcdWriteChar(',', NORMAL);
   	glcdWriteChar(' ', NORMAL);
   } else {
   	print_dow(NORMAL,month,day,year);
   	print_month((mode == SET_MONTH)?INVERTED:NORMAL,month);
+  	glcdWriteChar(' ', NORMAL);
   	printnumber(day, (mode == SET_DAY)?INVERTED:NORMAL);
   	glcdWriteChar(',', NORMAL);
-  	glcdWriteChar(' ', NORMAL);
   }
+  printnumber(20,(mode == SET_YEAR)?INVERTED:NORMAL);
   printnumber(year, (mode == SET_YEAR)?INVERTED:NORMAL);
 }
 
