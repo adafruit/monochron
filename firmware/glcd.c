@@ -261,6 +261,31 @@ void glcdCircle(u08 xcenter, u08 ycenter, u08 radius, u08 color)
   }
 }
 
+
+// draw circle
+void glcdFillCircle(u08 xcenter, u08 ycenter, u08 radius, u08 color)
+{
+
+  int tswitch, y, x = 0;
+  unsigned char d;
+
+  d = ycenter - xcenter;
+  y = radius;
+  tswitch = 3 - 2 * radius;
+  while (x <= y) {
+    glcdFillRectangle(xcenter + x, ycenter - y, 1, y*2, color);
+    glcdFillRectangle(xcenter - x, ycenter - y, 1, y*2, color);
+    glcdFillRectangle(ycenter + y - d, ycenter - x, 1, x*2, color);
+    glcdFillRectangle(ycenter - y - d, ycenter - x, 1, x*2, color);   
+    if (tswitch < 0) tswitch += (4 * x + 6);
+    else {
+      tswitch += (4 * (x - y) + 10);
+      y--;
+    }
+    x++;
+  }
+}
+
 // text routines
 
 // write a character at the current position
