@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-
+ 
 #include "util.h"
 #include "ratt.h"
 #include "ks0108.h"
