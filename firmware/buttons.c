@@ -1,3 +1,10 @@
+/* ***************************************************************************
+// buttons.c - the button debouncing/switches handling
+// This code is distributed under the GNU Public License
+//		which can be found at http://www.gnu.org/licenses/gpl.txt
+//
+**************************************************************************** */
+
 #include <avr/io.h>      // this contains all the IO port definitions
 #include <avr/interrupt.h>
 #include <util/delay.h>

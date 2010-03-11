@@ -15,7 +15,7 @@ OPT = s
 
 # List C source files here. (C dependencies are automatically generated.)
 
-SRC = ratt.c config.c buttons.c anim.c util.c glcd.c ks0108.c i2c.c
+SRC = ratt.c config.c buttons.c anim.c util.c glcd.c ks0108.c i2c.c rle.c
 
 # List Assembler source files here.
 # Make them always end in a capital .S.  Files ending in a lowercase .s

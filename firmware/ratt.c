@@ -1,3 +1,10 @@
+/* ***************************************************************************
+// ratt.c - the time, init and main loop
+// This code is distributed under the GNU Public License
+//		which can be found at http://www.gnu.org/licenses/gpl.txt
+//
+**************************************************************************** */
+
 #include <avr/io.h>      // this contains all the IO port definitions
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -14,7 +21,7 @@
 
 
 volatile uint8_t time_s, time_m, time_h;
-volatile uint8_t old_h, old_m;
+volatile uint8_t old_h, old_m, old_s;
 volatile uint8_t timeunknown = 1;
 volatile uint8_t date_m, date_d, date_y;
 volatile uint8_t alarming, alarm_on, alarm_tripped, alarm_h, alarm_m;
@@ -24,7 +31,7 @@ volatile uint8_t sleepmode = 0;
 volatile uint8_t region;
 volatile uint8_t time_format;
 extern volatile uint8_t screenmutex;
-volatile uint8_t minute_changed = 0, hour_changed = 0;
+volatile uint8_t minute_changed = 0, hour_changed = 0, second_changed = 0;
 volatile uint8_t score_mode_timeout = 0;
 volatile uint8_t score_mode = SCORE_MODE_TIME;
 volatile uint8_t last_score_mode;
@@ -107,7 +114,6 @@ int main(void) {
 
   DEBUGP("clock!");
   clock_init();
-  init_crand();	//Initialize the seed based upon current time.  Very first value discarded.
   //beep(4000, 100);
 
   init_eeprom();
@@ -163,22 +169,22 @@ int main(void) {
 	{
 		display_date=3;
 		score_mode = SCORE_MODE_DATELONG;
-	    score_mode_timeout = 3;
-	    setscore();
+	    score_mode_timeout = SCORE_MODE_TIMEOUT;
+	    //drawdisplay();
 	}
 	else if(display_date==2 && !score_mode_timeout)
 	{
 		display_date=3;
 		score_mode = SCORE_MODE_DATE;
-	    score_mode_timeout = 3;
-	    setscore();
+	    score_mode_timeout = SCORE_MODE_TIMEOUT;
+	    //drawdisplay();
 	}
 	else if(display_date==3 && !score_mode_timeout)
 	{
 		display_date=0;
 		score_mode = SCORE_MODE_YEAR;
-	    score_mode_timeout = 3;
-	    setscore();
+	    score_mode_timeout = SCORE_MODE_TIMEOUT;
+	    //drawdisplay();
 	}
 	/*if(display_date && !score_mode_timeout)
 	{
@@ -234,8 +240,8 @@ int main(void) {
 	  	display_date = 1;
 	  	score_mode = SCORE_MODE_DOW;
 	  }
-	  score_mode_timeout = 3;
-	  setscore();
+	  score_mode_timeout = SCORE_MODE_TIMEOUT;
+	  //drawdisplay();
 	}
 
     if (just_pressed & 0x1) {
@@ -243,7 +249,7 @@ int main(void) {
       display_date = 0;
       score_mode = SCORE_MODE_TIME;
       score_mode_timeout = 0;
-      setscore();
+      //drawdisplay();
       switch(displaymode) {
       case (SHOW_TIME):
 	displaymode = SET_ALARM;
@@ -273,28 +279,23 @@ int main(void) {
 	glcdClearScreen();
 	initdisplay(0);
       }
-
-      if (displaymode == SHOW_TIME) {
-	glcdClearScreen();
-	initdisplay(0);
-      }
     }
 
     step();
     if (displaymode == SHOW_TIME) {
-      if (! inverted && alarming && (time_s & 0x1)) {
+      if (! inverted  && alarming && (time_s & 0x1)) {
 	inverted = 1;
-	initdisplay(inverted);
+	drawdisplay(inverted);
       }
       else if ((inverted && ! alarming) || (alarming && inverted && !(time_s & 0x1))) {
 	inverted = 0;
-	initdisplay(0);
+	drawdisplay(inverted);
       } else {
 	PORTB |= _BV(5);
-	draw(inverted);
+	drawdisplay(inverted);
 	PORTB &= ~_BV(5);
+      }
     }
-  }
   
     while (animticker);
     //uart_getchar();  // you would uncomment this so you can manually 'step'
@@ -348,8 +349,8 @@ void setalarmstate(void) {
       // reset snoozing
       snoozetimer = 0;
 	  score_mode = SCORE_MODE_ALARM;
-	  score_mode_timeout = 3;
-	  setscore();
+	  score_mode_timeout = SCORE_MODE_TIMEOUT;
+	  //drawdisplay();
       DEBUGP("alarm on");
     }   
   }
@@ -474,7 +475,11 @@ SIGNAL (TIMER2_OVF_vect) {
   } else if (time_m != last_m) {
     minute_changed = 1;
     old_m = last_m;
+  } else if (time_s != last_s) {
+    second_changed = 1;
+    old_s = last_s;
   }
+
 
   if (time_s != last_s) {
     if(alarming && snoozetimer)
@@ -491,7 +496,6 @@ SIGNAL (TIMER2_OVF_vect) {
 	    } else if (minute_changed) {
 	      time_m = old_m;
 	    }
-	    setscore();
 	    if(hour_changed || minute_changed) {
 	      time_h = last_h;
 	      time_m = last_m;

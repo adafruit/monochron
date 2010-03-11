@@ -1,3 +1,10 @@
+/* ***************************************************************************
+// config.c - the configuration menu handling
+// This code is distributed under the GNU Public License
+//		which can be found at http://www.gnu.org/licenses/gpl.txt
+//
+**************************************************************************** */
+
 #include <avr/io.h>      // this contains all the IO port definitions
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -294,7 +301,6 @@ void set_date(void) {
 	date_m = month;
 	date_d = day;
 	writei2ctime(time_s, time_m, time_h, 0, date_d, date_m, date_y);
-	init_crand();
       }
       screenmutex--;
     }
@@ -770,7 +776,6 @@ void set_time(void) {
 	time_m = min;
 	time_s = sec;
 	writei2ctime(time_s, time_m, time_h, 0, date_d, date_m, date_y);
-	init_crand();
       }
       screenmutex--;
     }

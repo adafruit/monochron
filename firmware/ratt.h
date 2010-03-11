@@ -1,6 +1,6 @@
 #define halt(x)  while (1)
 
-#define DEBUGGING 0
+#define DEBUGGING 1
 #define DEBUG(x)  if (DEBUGGING) { x; }
 #define DEBUGP(x) DEBUG(putstring_nl(x))
 
@@ -29,55 +29,28 @@
 // how many seconds we will wait before turning off menus
 #define INACTIVITYTIMEOUT 10 
 
+#define MAX_STEPS 32
+
+#define SCORE_MODE_TIMEOUT ((ANIMTICK_MS * MAX_STEPS * 2)/1000)
+
+
 /*************************** DISPLAY PARAMETERS */
 
 // how many pixels to indent the menu items
 #define MENU_INDENT 8
 
-// Where the HOUR10 HOUR1 MINUTE10 and MINUTE1 digits are
-// in pixels
-#define DISPLAY_H10_X 30
-#define DISPLAY_H1_X 45
-#define DISPLAY_M10_X 70
-#define DISPLAY_M1_X 85
+#define DIGITSPACING 3
+#define DOTRADIUS 3
 
-#define DISPLAY_DOW1_X 35
-#define DISPLAY_DOW2_X 50
-#define DISPLAY_DOW3_X 70
+#define DIGIT_WIDTH 28
+#define DIGIT_HEIGHT 64
 
-#define DISPLAY_MON1_X 20
-#define DISPLAY_MON2_X 35
-#define DISPLAY_MON3_X 50
 
-#define DISPLAY_DAY10_X 70
-#define DISPLAY_DAY1_X 85
-
-// buffer space from the top
-#define DISPLAY_TIME_Y 4
-
-// how big are the pixels (for math purposes)
-#define DISPLAY_DIGITW 10
-#define DISPLAY_DIGITH 16
-
-#define RIGHTPADDLE_X (SCREEN_W - PADDLE_W - 10)
-#define LEFTPADDLE_X 10
-
-// Paddle size (in pixels) and max speed for AI
-#define PADDLE_H 12
-#define PADDLE_W 3
-#define MAX_PADDLE_SPEED 5
-
-// How big our screen is in pixels
-#define SCREEN_W 128
-#define SCREEN_H 64
-
-// How thick the top and bottom lines are in pixels
-#define BOTBAR_H 2
-#define TOPBAR_H 2
-
-// Specs of the middle line
-#define MIDLINE_W 1
-#define MIDLINE_H (SCREEN_H / 16) // how many 'stipples'
+#define DISPLAY_H10_X  0
+#define DISPLAY_H1_X  DIGIT_WIDTH + DIGITSPACING
+#define DISPLAY_M10_X  GLCD_XPIXELS - 2*DIGIT_WIDTH - DIGITSPACING
+#define DISPLAY_M1_X  GLCD_XPIXELS - DIGIT_WIDTH
+#define DISPLAY_TIME_Y 0
 
 
 /* not used
@@ -112,6 +85,7 @@
 #define SCORE_MODE_ALARM 3
 #define SCORE_MODE_DOW 4
 #define SCORE_MODE_DATELONG 5
+
 
 // Constants for how to display time & date
 #define REGION_US 0
@@ -195,17 +169,11 @@ void drawArrow(uint8_t x, uint8_t y, uint8_t l);
 void setalarmstate(void);
 void beep(uint16_t freq, uint8_t duration);
 void printnumber(uint8_t n, uint8_t inverted);
-uint8_t intersectrect(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1,
-					  uint8_t x2, uint8_t y2, uint8_t w2, uint8_t h2);
-
-uint8_t calculate_keepout(float theball_x, float theball_y, float theball_dx, float theball_dy, uint8_t *keepout1, uint8_t *keepout2);
-
-void drawbigdigit(uint8_t x, uint8_t y, uint8_t n, uint8_t inverted);
-void drawmidline(uint8_t inverted);
+void print_region_setting(uint8_t inverted);
 
 float random_angle_rads(void);
 
-void init_crand();
+void init_crand(void);
 uint8_t dotw(uint8_t mon, uint8_t day, uint8_t yr);
 
 uint8_t i2bcd(uint8_t x);
@@ -214,3 +182,14 @@ uint8_t readi2ctime(void);
 
 void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
 		  uint8_t date, uint8_t mon, uint8_t yr);
+
+void print_date(uint8_t month, uint8_t day, uint8_t year, uint8_t mode);
+
+void drawdigit(uint8_t d, uint8_t x, uint8_t y, uint8_t inverted);
+void transitiondigit(uint8_t x, uint8_t y, uint8_t o, uint8_t t, uint8_t inverted);
+
+void blitsegs_rom(uint8_t x_origin, uint8_t y_origin, PGM_P bitmap_p, uint8_t height, uint8_t inverted);
+
+void bitblit_ram(uint8_t x_origin, uint8_t y_origin, uint8_t *bitmap_p, uint8_t size, uint8_t inverted);
+
+void drawdisplay(uint8_t inverted);
