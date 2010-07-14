@@ -90,10 +90,6 @@
 // Constants for how to display time & date
 #define REGION_US 0
 #define REGION_EU 1
-#define DOW_REGION_US 2
-#define DOW_REGION_EU 3
-#define DATELONG 4
-#define DATELONG_DOW 5
 #define TIME_12H 0
 #define TIME_24H 1
 

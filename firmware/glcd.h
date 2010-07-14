@@ -72,7 +72,7 @@ void glcdClearDot(u08 x, u08 y);
 void glcdLine(u08 x1, u08 y1, u08 x2, u08 y2);
 
 //! draw rectangle (coords????)
-void glcdRectangle(u08 x, u08 y, u08 a, u08 b);
+void glcdRectangle(u08 x, u08 y, u08 w, u08 h, u08 color);
 
 void glcdFillRectangle(u08 x, u08 y, u08 a, u08 b, u08 color);
 

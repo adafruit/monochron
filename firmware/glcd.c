@@ -77,7 +77,7 @@ void glcdLine(u08 x1, u08 y1, u08 x2, u08 y2)
 };
 
 // draw rectangle
-void glcdRectangle(u08 x, u08 y, u08 w, u08 h)
+void glcdRectangle(u08 x, u08 y, u08 w, u08 h, u08 color)
 {
   /*
   unsigned char j;
@@ -94,10 +94,10 @@ void glcdRectangle(u08 x, u08 y, u08 w, u08 h)
 */
   // optimized!
   
-  glcdFillRectangle(x, y, 1, h, ON);
-  glcdFillRectangle(x+w-1, y, 1, h, ON);
-  glcdFillRectangle(x, y, w, 1, ON);
-  glcdFillRectangle(x, y+h-1, w, 1, ON);
+  glcdFillRectangle(x, y, 1, h, color);
+  glcdFillRectangle(x+w-1, y, 1, h, color);
+  glcdFillRectangle(x, y, w, 1, color);
+  glcdFillRectangle(x, y+h-1, w, 1, color);
 }
 
 

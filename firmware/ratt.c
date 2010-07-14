@@ -36,6 +36,9 @@ volatile uint8_t score_mode_timeout = 0;
 volatile uint8_t score_mode = SCORE_MODE_TIME;
 volatile uint8_t last_score_mode;
 
+volatile uint8_t blinkingdots = 0;
+extern uint8_t digitsmutex ;
+
 // These store the current button states for all 3 buttons. We can 
 // then query whether the buttons are pressed and released or pressed
 // This allows for 'high speed incrementing' when setting the time
@@ -90,10 +93,12 @@ void init_eeprom(void) {	//Set eeprom to a default state.
   }
 }
 
+
 int main(void) {
   uint8_t inverted = 0;
   uint8_t mcustate;
   uint8_t display_date = 0;
+  uint8_t lastblinky;
 
   // check if we were reset
   mcustate = MCUSR;
@@ -160,89 +165,47 @@ int main(void) {
     animticker = ANIMTICK_MS;
 
     // check buttons to see if we have interaction stuff to deal with
-	if(just_pressed && alarming)
-	{
-	  just_pressed = 0;
-	  setsnooze();
-	}
-	if(display_date==1 && !score_mode_timeout)
-	{
-		display_date=3;
-		score_mode = SCORE_MODE_DATELONG;
-	    score_mode_timeout = SCORE_MODE_TIMEOUT;
-	    //drawdisplay();
-	}
-	else if(display_date==2 && !score_mode_timeout)
-	{
-		display_date=3;
-		score_mode = SCORE_MODE_DATE;
-	    score_mode_timeout = SCORE_MODE_TIMEOUT;
-	    //drawdisplay();
-	}
-	else if(display_date==3 && !score_mode_timeout)
-	{
-		display_date=0;
-		score_mode = SCORE_MODE_YEAR;
-	    score_mode_timeout = SCORE_MODE_TIMEOUT;
-	    //drawdisplay();
-	}
-	/*if(display_date && !score_mode_timeout)
-	{
-	  if(last_score_mode == SCORE_MODE_DATELONG)
-	  {
-	    score_mode = SCORE_MODE_DOW;
-	    score_mode_timeout = 3;
-	    setscore();
-	  }
-	  
-	  else if(last_score_mode == SCORE_MODE_DOW)
-	  {
-	    score_mode = SCORE_MODE_DATE;
-	    score_mode_timeout = 3;
-	    setscore();
-	  }
-	  else if(last_score_mode == SCORE_MODE_DATE)
-	  {
-	    score_mode = SCORE_MODE_YEAR;
-	    score_mode_timeout = 3;
-	    setscore();
-	    display_date = 0;
-	  }
-	  
-	}*/
-	/*if(display_date && !score_mode_timeout)
-	{
-	  score_mode = SCORE_MODE_YEAR;
-	  score_mode_timeout = 3;
-	  setscore();
-	  display_date = 0;
-	}*/
+    if(just_pressed && alarming)
+      {
+	just_pressed = 0;
+	setsnooze();
+      }
+    if(display_date==1 && !score_mode_timeout)
+      {
+	display_date=3;
+	score_mode = SCORE_MODE_DATELONG;
+	score_mode_timeout = SCORE_MODE_TIMEOUT;
+	//drawdisplay();
+      }
+    else if(display_date==2 && !score_mode_timeout)
+      {
+	display_date=3;
+	score_mode = SCORE_MODE_DATE;
+	score_mode_timeout = SCORE_MODE_TIMEOUT;
+	//drawdisplay();
+      }
+    else if(display_date==3 && !score_mode_timeout)
+      {
+	display_date=0;
+	score_mode = SCORE_MODE_YEAR;
+	score_mode_timeout = SCORE_MODE_TIMEOUT;
+	//drawdisplay();
+      }
 
+    
     //Was formally set for just the + button.  However, because the Set button was never
     //accounted for, If the alarm was turned on, and ONLY the set button was pushed since then,
     //the alarm would not sound at alarm time, but go into a snooze immediately after going off.
     //This could potentially make you late for work, and had to be fixed.
-	if (just_pressed & 0x6) {
-	  just_pressed = 0;
-	  if((region == REGION_US) || (region == REGION_EU)) {
-	  	display_date = 3;
-	  	score_mode = SCORE_MODE_DATE;
-	  }
-	  else if ((region == DOW_REGION_US) || (region == DOW_REGION_EU)) {
-	  	display_date = 2;
-	  	score_mode = SCORE_MODE_DOW;
-	  }
-	  else if (region == DATELONG) {
-	  	display_date = 3;
-	  	score_mode = SCORE_MODE_DATELONG;
-	  }
-	  else {
-	  	display_date = 1;
-	  	score_mode = SCORE_MODE_DOW;
-	  }
-	  score_mode_timeout = SCORE_MODE_TIMEOUT;
-	  //drawdisplay();
-	}
+    if (just_pressed & 0x6) {
+      just_pressed = 0;
+      if((region == REGION_US) || (region == REGION_EU)) {
+	display_date = 3;
+	score_mode = SCORE_MODE_DATE;
+      }
+      score_mode_timeout = SCORE_MODE_TIMEOUT;
+      //drawdisplay();
+    }
 
     if (just_pressed & 0x1) {
       just_pressed = 0;
@@ -269,13 +232,16 @@ int main(void) {
 	set_region();
 	break;
 #ifdef BACKLIGHT_ADJUST
-	  case SET_REGION:
+      case SET_REGION:
 	displaymode = SET_BRIGHTNESS;
 	set_backlight();
 	break;
 #endif
       default:
 	displaymode = SHOW_TIME;
+      }
+
+      if (displaymode == SHOW_TIME) {
 	glcdClearScreen();
 	initdisplay(0);
       }
@@ -294,6 +260,10 @@ int main(void) {
 	PORTB |= _BV(5);
 	drawdisplay(inverted);
 	PORTB &= ~_BV(5);
+      }
+      if ((score_mode == SCORE_MODE_TIME) && !digitsmutex && (lastblinky != blinkingdots)) {
+	drawdots(blinkingdots);
+	lastblinky = blinkingdots;
       }
     }
   
@@ -546,6 +516,11 @@ SIGNAL (TIMER2_OVF_vect) {
   	 DEBUG(putstring_nl("ALARM GOING!!!!"));
   	 alarming = 1;
   	 alarm_tripped = 0;
+  }
+
+  // 2 Hz
+  if ((t2divider2 == 3) || (t2divider2 == 0)) {
+    blinkingdots = !blinkingdots;
   }
 
   if (t2divider2 == 6) {

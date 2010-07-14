@@ -30,6 +30,9 @@ extern volatile uint8_t time_format;
 extern volatile uint8_t region;
 extern volatile uint8_t score_mode;
 
+extern volatile uint8_t blinkingdots;
+uint8_t digitsmutex = 0;
+
 extern volatile uint8_t second_changed, minute_changed, hour_changed;
 
 uint8_t redraw_time = 0;
@@ -90,19 +93,35 @@ void initdisplay(uint8_t inverted) {
   for (uint8_t i=0; i<4; i++) {
     old_digits[i] = new_digits[i];
   }
-  glcdFillCircle(64, 20, DOTRADIUS, !inverted);
-  glcdFillCircle(64, 64-DOTRADIUS-2, DOTRADIUS, !inverted);
+
+  drawdots(inverted);
+
   steps = 0;
 }
 
-void drawdot(uint8_t x, uint8_t y) {
+void drawdot(uint8_t x, uint8_t y, uint8_t inverted) {
+  glcdFillRectangle(x, y-3, 1, 6, !inverted);
+  glcdFillRectangle(x-1, y-3, 1, 6, !inverted);
 
+  glcdFillRectangle(x-2, y-2, 1, 4, !inverted);
+  glcdFillRectangle(x+1, y-2, 1, 4, !inverted);
+
+  glcdFillRectangle(x-3, y-1, 1, 2, !inverted);
+  glcdFillRectangle(x+2, y-1, 1, 2, !inverted);
+
+  //glcdFillCircle(x, y, DOTRADIUS-1, !inverted);
 }
+
+void drawdots(uint8_t inverted) {
+  drawdot(64, 20, inverted);
+  drawdot(64, 64-DOTRADIUS-2, inverted);
+}
+
+
 
 
 void drawdisplay(uint8_t inverted) {
   static uint8_t last_mode = 0;
-  static uint8_t digitsmutex = 0;
   static uint8_t lastinverted = 0;
 
   /*
@@ -138,8 +157,7 @@ void drawdisplay(uint8_t inverted) {
 	new_digits[0] = newleft/10;
 	new_digits[1] = newleft%10;
 
-	glcdFillCircle(64, 20, DOTRADIUS, !inverted);
-	glcdFillCircle(64, 64-DOTRADIUS-2, DOTRADIUS, !inverted);
+	//drawdots(inverted);
 
 	last_mode = score_mode;
 	digitsmutex++;
@@ -173,8 +191,7 @@ void drawdisplay(uint8_t inverted) {
     if ((lastinverted != inverted) && !digitsmutex) {
       glcdFillRectangle(0, 0, GLCD_XPIXELS, GLCD_YPIXELS, inverted);
 
-      glcdFillCircle(64, 20, DOTRADIUS, !inverted);
-      glcdFillCircle(64, 64-DOTRADIUS-2, DOTRADIUS, !inverted);
+      drawdots(inverted);
 
       drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, new_digits[3], inverted);
       drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, new_digits[2], inverted);
@@ -204,8 +221,8 @@ void drawdisplay(uint8_t inverted) {
 	new_digits[1] = left % 10;
 	new_digits[2] = right / 10;
 	new_digits[3] = right % 10;
-	glcdFillCircle(64, 20, DOTRADIUS, inverted);
-	glcdFillCircle(64, 64-DOTRADIUS-2, DOTRADIUS, inverted);
+
+	drawdots(!inverted);
       }
     }
   } else if (score_mode == SCORE_MODE_YEAR) {
@@ -224,9 +241,10 @@ void drawdisplay(uint8_t inverted) {
 	new_digits[1] = 0;
 	new_digits[2] = date_y / 10;
 	new_digits[3] = date_y % 10;
+
+	glcdFillRectangle(60, 35, 7, 5, inverted);
       }
     }
-
   }
 
   /*
@@ -275,9 +293,17 @@ void drawdisplay(uint8_t inverted) {
       old_digits[1] = new_digits[1];
       old_digits[0] = new_digits[0];
       digitsmutex--;
+
+      if (score_mode == SCORE_MODE_DATE) {
+	glcdFillRectangle(60, 35, 7, 5, !inverted);
+      } else if (score_mode == SCORE_MODE_YEAR) {
+
+      } else if (score_mode == SCORE_MODE_TIME) {
+	//drawdots(inverted);
+      }
     }
   }
-
+  
   lastinverted = inverted;
 
 }
@@ -493,44 +519,3 @@ void bitblit_rom(uint8_t x_origin, uint8_t y_origin, PGM_P bitmap_p, uint8_t siz
 
 
 
-
-static unsigned char __attribute__ ((progmem)) MonthText[] = {
-	0,0,0,
-	'J','A','N',
-	'F','E','B',
-	'M','A','R',
-	'A','P','R',
-	'M','A','Y',
-	'J','U','N',
-	'J','U','L',
-	'A','U','G',
-	'S','E','P',
-	'O','C','T',
-	'N','O','V',
-	'D','E','C',
-};
-
-static unsigned char __attribute__ ((progmem)) DOWText[] = {
-	'S','U','N',
-	'M','O','N',
-	'T','U','E',
-	'W','E','D',
-	'T','H','U',
-	'F','R','I',
-	'S','A','T',
-};
-
-uint8_t dotw(uint8_t mon, uint8_t day, uint8_t yr)
-{
-  uint16_t month, year;
-
-    // Calculate day of the week
-    
-    month = mon;
-    year = 2000 + yr;
-    if (mon < 3)  {
-      month += 12;
-      year -= 1;
-    }
-    return (day + (2 * month) + (6 * (month+1)/10) + year + (year/4) - (year/100) + (year/400) + 1) % 7;
-}
