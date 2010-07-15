@@ -54,6 +54,12 @@ SIGNAL(TIMER1_OVF_vect) {
   PIEZO_PORT ^= _BV(PIEZO);
 }
 
+
+SIGNAL(TIMER1_COMPA_vect) {
+  PIEZO_PORT ^= _BV(PIEZO);
+}
+
+
 volatile uint16_t millis = 0;
 volatile uint16_t animticker, alarmticker;
 SIGNAL(TIMER0_COMPA_vect) {
@@ -248,25 +254,33 @@ int main(void) {
     }
 
     step();
+
+    if (!alarming)
+      inverted = 0;
+
     if (displaymode == SHOW_TIME) {
-      if (! inverted  && alarming && (time_s & 0x1)) {
-	inverted = 1;
-	drawdisplay(inverted);
-      }
-      else if ((inverted && ! alarming) || (alarming && inverted && !(time_s & 0x1))) {
-	inverted = 0;
-	drawdisplay(inverted);
+      // if the alarm is going off, we invert once a second 
+      // unless we are in the middle of a transition
+      if (alarming && !digitsmutex && !minute_changed && !hour_changed) {
+	if (!inverted && !(time_s & 0x1)) {
+	  inverted = 1;
+	  drawdisplay(inverted);
+	}
+	else if (inverted && (time_s & 0x1)) {
+	  inverted = 0;
+	  drawdisplay(inverted);
+	}
       } else {
 	PORTB |= _BV(5);
 	drawdisplay(inverted);
 	PORTB &= ~_BV(5);
-      }
-      if ((score_mode == SCORE_MODE_TIME) && !digitsmutex && (lastblinky != blinkingdots)) {
-	drawdots(blinkingdots);
-	lastblinky = blinkingdots;
+	if  ((score_mode == SCORE_MODE_TIME) && (lastblinky != blinkingdots) && !digitsmutex) {
+	  drawdots(blinkingdots);
+	  lastblinky = blinkingdots;
+	}
       }
     }
-  
+
     while (animticker);
     //uart_getchar();  // you would uncomment this so you can manually 'step'
   }
@@ -274,10 +288,6 @@ int main(void) {
   halt();
 }
 
-
-SIGNAL(TIMER1_COMPA_vect) {
-  PIEZO_PORT ^= _BV(PIEZO);
-}
 
 void beep(uint16_t freq, uint8_t duration) {
   // use timer 1 for the piezo/buzzer 

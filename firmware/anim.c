@@ -157,7 +157,7 @@ void drawdisplay(uint8_t inverted) {
 	new_digits[0] = newleft/10;
 	new_digits[1] = newleft%10;
 
-	//drawdots(inverted);
+	drawdots(inverted);
 
 	last_mode = score_mode;
 	digitsmutex++;
