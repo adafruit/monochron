@@ -158,6 +158,7 @@ void drawdisplay(uint8_t inverted) {
 	new_digits[1] = newleft%10;
 
 	drawdots(inverted);
+	glcdFillRectangle(60, 35, 7, 5, inverted);
 
 	last_mode = score_mode;
 	digitsmutex++;
@@ -242,6 +243,7 @@ void drawdisplay(uint8_t inverted) {
 	new_digits[2] = date_y / 10;
 	new_digits[3] = date_y % 10;
 
+	drawdots(!inverted);
 	glcdFillRectangle(60, 35, 7, 5, inverted);
       }
     }
