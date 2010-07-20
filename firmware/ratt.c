@@ -465,7 +465,7 @@ SIGNAL (TIMER2_OVF_vect) {
     if(alarming && snoozetimer)
 	  snoozetimer--;
 
-    if(score_mode_timeout) {
+    if(score_mode_timeout && !digitsmutex) {
 	  score_mode_timeout--;
 	  if(!score_mode_timeout) {
 	  	last_score_mode = score_mode;
