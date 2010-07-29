@@ -165,28 +165,30 @@ void drawdisplay(uint8_t inverted) {
       }
     }
 
-    if (minute_changed || hour_changed) {
-      //putstring_nl("changed");
-      if (! digitsmutex) {
-	digitsmutex++;
-	
-	old_digits[3] = new_digits[3];
-	new_digits[3] = time_m % 10;
-	old_digits[2] = new_digits[2];
-	new_digits[2] = time_m / 10;
+    if (score_mode == SCORE_MODE_TIME) {	//Prevent the minute/hour transistion if time changes, while alarm time is still being shown.
+      if (minute_changed || hour_changed) {
+        //putstring_nl("changed");
+        if (! digitsmutex) {
+	  digitsmutex++;
 	  
-	if (hour_changed) {
-	  uint8_t newleft = time_h;
-	  if (time_format == TIME_12H) {
-	    newleft = (time_h + 23)%12 + 1;
+	  old_digits[3] = new_digits[3];
+	  new_digits[3] = time_m % 10;
+	  old_digits[2] = new_digits[2];
+	  new_digits[2] = time_m / 10;
+	    
+	  if (hour_changed) {
+	    uint8_t newleft = time_h;
+	    if (time_format == TIME_12H) {
+	      newleft = (time_h + 23)%12 + 1;
+	    }
+	    old_digits[0] = new_digits[0];
+	    old_digits[1] = new_digits[1];
+	    new_digits[0] = newleft/10;
+	    new_digits[1] = newleft%10;
+	    }
+	    minute_changed = hour_changed = 0;
 	  }
-	  old_digits[0] = new_digits[0];
-	  old_digits[1] = new_digits[1];
-	  new_digits[0] = newleft/10;
-	  new_digits[1] = newleft%10;
-	  }
-	  minute_changed = hour_changed = 0;
-	}
+      }
     }
 
     if ((lastinverted != inverted) && !digitsmutex) {
