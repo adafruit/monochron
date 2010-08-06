@@ -304,7 +304,10 @@ void glcdWriteCharGr(u08 grCharIdx)
 	{
 		// add this graphic's length to the startIdx
 		// to get the startIdx of the next one
-		grStartIdx += pgm_read_byte(FontGr+grStartIdx);
+		// 2010-03-03 BUG Dataman/CRJONES There's a bug here:  Have to add 1 for the byte-cout.
+		// grStartIdx += pgm_read_byte(FontGr+grStartIdx);
+		grStartIdx += pgm_read_byte(FontGr+grStartIdx)+1;
+		
 	}
 	grLength = pgm_read_byte(FontGr+grStartIdx);
 
