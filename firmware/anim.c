@@ -13,6 +13,7 @@
 #include "ks0108.h"
 #include "glcd.h"
 #include "font5x7.h"
+#include "fonttable.h"
 
 extern volatile uint8_t time_s, time_m, time_h;
 extern volatile uint8_t old_m, old_h;
@@ -23,6 +24,9 @@ extern volatile uint8_t region;
 extern volatile uint8_t score_mode;
 
 extern volatile uint8_t second_changed, minute_changed, hour_changed;
+
+const uint8_t DOWText[] PROGMEM = "sunmontuewedthufrisat";
+const uint8_t MonthText[] PROGMEM = "   janfebmaraprmayjunjulaugsepoctnovdec";
 
 uint8_t redraw_time = 0;
 uint8_t last_score_mode = 0;
@@ -68,6 +72,28 @@ void drawdisplay(void) {
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, right % 10, inverted);
     drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
     drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
+  } else if (score_mode == SCORE_MODE_DOW) {
+  	uint8_t dow = dotw(date_m, date_d, date_y);
+  	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
+    drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 0), inverted);
+    drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 1), inverted);
+    drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 2), inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
+  } else if (score_mode == SCORE_MODE_DATELONG_MON) {
+  	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
+    drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText + (date_m*3) + 0), inverted);
+    drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText + (date_m*3) + 1), inverted);
+    drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText + (date_m*3) + 2), inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
+  } else if (score_mode == SCORE_MODE_DATELONG_DAY) {
+  	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
+    draw7seg(DISPLAY_H1_X, DISPLAY_TIME_Y, 0x00 , inverted);
+    drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, date_d/10, inverted);
+    drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, date_d % 10, inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
   } else if ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)) {
     // draw time or alarm
     uint8_t left, right;
@@ -111,102 +137,24 @@ void drawdot(uint8_t x, uint8_t y, uint8_t inverted) {
   glcdFillCircle(x, y, DOTRADIUS, !inverted);
 }
 
+void draw7seg(uint8_t x, uint8_t y, uint8_t segs, uint8_t inverted)
+{
+	for(uint8_t i=0;i<7;i++)
+	{
+		if(segs & (1 << (7 - i)))
+			drawsegment('a'+i, x, y, inverted);
+		else
+			drawsegment('a'+i, x, y, !inverted);
+	}
+}
+
 void drawdigit(uint8_t x, uint8_t y, uint8_t d, uint8_t inverted) {
-  switch (d) {
-  case 0:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, inverted);
-    drawsegment('f', x, y, inverted);
-
-    drawsegment('g', x, y, !inverted);
-    break;
-  case 1:
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-
-    drawsegment('a', x, y, !inverted);
-    drawsegment('d', x, y, !inverted);
-    drawsegment('e', x, y, !inverted);
-    drawsegment('f', x, y, !inverted);
-    drawsegment('g', x, y, !inverted);
-    break;
-  case 2:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, inverted);
-    drawsegment('g', x, y, inverted);
-
-    drawsegment('c', x, y, !inverted);
-    drawsegment('f', x, y, !inverted);
-    break;
-  case 3:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, !inverted);
-    drawsegment('f', x, y, !inverted);
-    drawsegment('g', x, y, inverted);
-    break;
-  case 4:
-    drawsegment('a', x, y, !inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, !inverted);
-    drawsegment('e', x, y, !inverted);
-    drawsegment('f', x, y, inverted);
-    drawsegment('g', x, y, inverted);
-    break;
-  case 5:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, !inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, !inverted);
-    drawsegment('f', x, y, inverted);
-    drawsegment('g', x, y, inverted);
-    break;
-  case 6:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, !inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, inverted);
-    drawsegment('f', x, y, inverted);
-    drawsegment('g', x, y, inverted);
-    break;
-  case 7:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, !inverted);
-    drawsegment('e', x, y, !inverted);
-    drawsegment('f', x, y, !inverted);
-    drawsegment('g', x, y, !inverted);
-    break;
-  case 8:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, inverted);
-    drawsegment('f', x, y, inverted);
-    drawsegment('g', x, y, inverted);
-    break;
-  case 9:
-    drawsegment('a', x, y, inverted);
-    drawsegment('b', x, y, inverted);
-    drawsegment('c', x, y, inverted);
-    drawsegment('d', x, y, inverted);
-    drawsegment('e', x, y, !inverted);
-    drawsegment('f', x, y, inverted);
-    drawsegment('g', x, y, inverted);
-    break;
-  }
+  if(d < 10)
+  	  draw7seg(x,y,pgm_read_byte(numbertable_p + d),inverted);
+  else if ((d >= 'a') || (d <= 'z'))
+  	  draw7seg(x,y,pgm_read_byte(alphatable_p + (d - 'a')),inverted);
+  else
+  	  draw7seg(x,y,0x00,inverted);
 }
 void drawsegment(uint8_t s, uint8_t x, uint8_t y, uint8_t inverted) {
   switch (s) {
@@ -266,32 +214,6 @@ static unsigned char __attribute__ ((progmem)) BigFont[] = {
 	0xFF, 0x91, 0x91, 0xFF,// 8 
 	0xF1, 0x91, 0x91, 0xFF,// 9
 	0x00, 0x00, 0x00, 0x00,// SPACE
-};
-
-static unsigned char __attribute__ ((progmem)) MonthText[] = {
-	0,0,0,
-	'J','A','N',
-	'F','E','B',
-	'M','A','R',
-	'A','P','R',
-	'M','A','Y',
-	'J','U','N',
-	'J','U','L',
-	'A','U','G',
-	'S','E','P',
-	'O','C','T',
-	'N','O','V',
-	'D','E','C',
-};
-
-static unsigned char __attribute__ ((progmem)) DOWText[] = {
-	'S','U','N',
-	'M','O','N',
-	'T','U','E',
-	'W','E','D',
-	'T','H','U',
-	'F','R','I',
-	'S','A','T',
 };
 
 uint8_t dotw(uint8_t mon, uint8_t day, uint8_t yr)
