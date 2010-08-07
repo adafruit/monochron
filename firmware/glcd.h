@@ -78,6 +78,7 @@ void glcdFillRectangle(u08 x, u08 y, u08 a, u08 b, u08 color);
 
 //! draw circle of <radius> at <xcenter,ycenter>
 void glcdCircle(u08 xcenter, u08 ycenter, u08 radius, u08 color);
+void glcdFillCircle(u08 xcenter, u08 ycenter, u08 radius, u08 color);
 
 //! write a standard ascii charater (values 20-127)
 // to the display at current position
