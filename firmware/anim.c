@@ -50,13 +50,18 @@ void initdisplay(uint8_t inverted) {
 void drawdisplay(void) {
   uint8_t inverted = 0;
 
+  if ((score_mode != SCORE_MODE_TIME) && (score_mode != SCORE_MODE_ALARM))
+  {
+  	drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
+    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/10, !inverted);
+  }
+
   if (score_mode == SCORE_MODE_YEAR) {
     drawdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, 2 , inverted);
     drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, 0, inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, (date_y % 100)/10, inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, date_y % 10, inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
   } else if (score_mode == SCORE_MODE_DATE) {
     uint8_t left, right;
     if (region == REGION_US) {
@@ -70,30 +75,22 @@ void drawdisplay(void) {
     drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left%10, inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, right/10, inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, right % 10, inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
   } else if (score_mode == SCORE_MODE_DOW) {
   	uint8_t dow = dotw(date_m, date_d, date_y);
   	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
     drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 0), inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 1), inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 2), inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
   } else if (score_mode == SCORE_MODE_DATELONG_MON) {
   	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
     drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText + (date_m*3) + 0), inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText + (date_m*3) + 1), inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText + (date_m*3) + 2), inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
   } else if (score_mode == SCORE_MODE_DATELONG_DAY) {
   	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
     draw7seg(DISPLAY_H1_X, DISPLAY_TIME_Y, 0x00 , inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, date_d/10, inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, date_d % 10, inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/3, !inverted);
-    drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*2/3, !inverted);
   } else if ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)) {
     // draw time or alarm
     uint8_t left, right;
@@ -104,9 +101,18 @@ void drawdisplay(void) {
       left = time_h;
       right = time_m;
     }
-    if (TIME_12H) {
+    uint8_t am = (left < 12);
+    if (time_format == TIME_12H) {
       left = (left + 23)%12 + 1;
+      if(am) {
+      	drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/10, inverted);
+      } else {
+      	drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/10, !inverted);
+      }
     }
+    else
+      drawdot(GLCD_XPIXELS/2, GLCD_YPIXELS*1/10, !inverted);
+      
 
     // draw hours
     if (left >= 10) {
