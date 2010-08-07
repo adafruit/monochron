@@ -160,8 +160,8 @@ int main(void) {
 	}
 	if(display_date==1 && !score_mode_timeout)
 	{
-		display_date=3;
-		score_mode = SCORE_MODE_DATELONG;
+		display_date=4;
+		score_mode = SCORE_MODE_DATELONG_MON;
 	    score_mode_timeout = 3;
 	    //drawdisplay();
 	}
@@ -178,6 +178,12 @@ int main(void) {
 		score_mode = SCORE_MODE_YEAR;
 	    score_mode_timeout = 3;
 	    //drawdisplay();
+	}
+	else if(display_date==4 && !score_mode_timeout)
+	{
+		display_date=3;
+		score_mode = SCORE_MODE_DATELONG_DAY;
+		score_mode_timeout = 3;
 	}
 	/*if(display_date && !score_mode_timeout)
 	{
@@ -226,8 +232,8 @@ int main(void) {
 	  	score_mode = SCORE_MODE_DOW;
 	  }
 	  else if (region == DATELONG) {
-	  	display_date = 3;
-	  	score_mode = SCORE_MODE_DATELONG;
+	  	display_date = 4;
+	  	score_mode = SCORE_MODE_DATELONG_MON;
 	  }
 	  else {
 	  	display_date = 1;
