@@ -382,6 +382,7 @@ uint8_t readi2ctime(void) {
   uint8_t clockdata[8];
   
   // check the time from the RTC
+  cli();
   r = i2cMasterSendNI(0xD0, 1, &regaddr);
 
   if (r != 0) {
@@ -395,6 +396,7 @@ uint8_t readi2ctime(void) {
   }
 
   r = i2cMasterReceiveNI(0xD0, 7, &clockdata[0]);
+  sei();
 
   if (r != 0) {
     DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
@@ -436,7 +438,9 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
   clockdata[6] = i2bcd(mon);  // month
   clockdata[7] = i2bcd(yr); // year
   
+  cli();
   uint8_t r = i2cMasterSendNI(0xD0, 8, &clockdata[0]);
+  sei();
 
   //DEBUG(putstring("Writing i2c data: ")); DEBUG(uart_putw_dec()); DEBUG(putstring_nl(""));
 
