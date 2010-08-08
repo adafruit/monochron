@@ -8,6 +8,10 @@
 //BACKLIGHT_ADJUST - Allows software control of backlight, assuming you mounted your 100ohm resistor in R2'.
 #define BACKLIGHT_ADJUST 1
 
+//OPTION_DOW_DATELONG - Allows showing Day of Week, and Longer format Dates, 
+//Like " sat","0807","2010", or " aug","  07","2010" or " sat"," aug","  07","2010".
+//#define OPTION_DOW_DATELONG 1
+
 // This is a tradeoff between sluggish and too fast to see
 #define MAX_BALL_SPEED 5 // note this is in vector arith.
 #define ball_radius 2 // in pixels

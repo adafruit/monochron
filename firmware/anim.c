@@ -15,6 +15,7 @@
 #include "font5x7.h"
 #include "fonttable.h"
 
+
 extern volatile uint8_t time_s, time_m, time_h;
 extern volatile uint8_t old_m, old_h;
 extern volatile uint8_t date_m, date_d, date_y;
@@ -25,8 +26,10 @@ extern volatile uint8_t score_mode;
 
 extern volatile uint8_t second_changed, minute_changed, hour_changed;
 
+#ifdef OPTION_DOW_DATELONG
 const uint8_t DOWText[] PROGMEM = "sunmontuewedthufrisat";
 const uint8_t MonthText[] PROGMEM = "   janfebmaraprmayjunjulaugsepoctnovdec";
+#endif
 
 uint8_t redraw_time = 0;
 uint8_t last_score_mode = 0;
@@ -75,7 +78,9 @@ void drawdisplay(void) {
     drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left%10, inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, right/10, inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, right % 10, inverted);
-  } else if (score_mode == SCORE_MODE_DOW) {
+  } 
+#ifdef OPTION_DOW_DATELONG
+  else if (score_mode == SCORE_MODE_DOW) {
   	uint8_t dow = dotw(date_m, date_d, date_y);
   	draw7seg(DISPLAY_H10_X, DISPLAY_TIME_Y, 0x00 , inverted);
     drawdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText + (dow*3) + 0), inverted);
@@ -91,7 +96,9 @@ void drawdisplay(void) {
     draw7seg(DISPLAY_H1_X, DISPLAY_TIME_Y, 0x00 , inverted);
     drawdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, date_d/10, inverted);
     drawdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, date_d % 10, inverted);
-  } else if ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)) {
+  } 
+#endif
+  else if ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)) {
     // draw time or alarm
     uint8_t left, right;
     if (score_mode == SCORE_MODE_ALARM) {
@@ -206,21 +213,6 @@ void drawhseg(uint8_t x, uint8_t y, uint8_t inverted) {
   glcdFillRectangle(x+HSEGMENT_W-2, y+1, 1, HSEGMENT_H - 2, ! inverted);
   glcdFillRectangle(x+HSEGMENT_W-1, y+2, 1, HSEGMENT_H - 4, ! inverted);
 }
-
-// 8 pixels high
-static unsigned char __attribute__ ((progmem)) BigFont[] = {
-	0xFF, 0x81, 0x81, 0xFF,// 0
-	0x00, 0x00, 0x00, 0xFF,// 1
-	0x9F, 0x91, 0x91, 0xF1,// 2
-	0x91, 0x91, 0x91, 0xFF,// 3
-	0xF0, 0x10, 0x10, 0xFF,// 4
-	0xF1, 0x91, 0x91, 0x9F,// 5
-	0xFF, 0x91, 0x91, 0x9F,// 6
-	0x80, 0x80, 0x80, 0xFF,// 7
-	0xFF, 0x91, 0x91, 0xFF,// 8 
-	0xF1, 0x91, 0x91, 0xFF,// 9
-	0x00, 0x00, 0x00, 0x00,// SPACE
-};
 
 uint8_t dotw(uint8_t mon, uint8_t day, uint8_t yr)
 {

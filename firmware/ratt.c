@@ -71,7 +71,11 @@ SIGNAL(TIMER0_COMPA_vect) {
 }
 
 void init_eeprom(void) {	//Set eeprom to a default state.
+#ifndef OPTION_DOW_DATELONG
   if(eeprom_read_byte((uint8_t *)EE_INIT) != EE_INITIALIZED) {
+#else
+  if(eeprom_read_byte((uint8_t *)EE_INIT) != (EE_INITIALIZED-1)) {
+#endif
     eeprom_write_byte((uint8_t *)EE_ALARM_HOUR, 8);
     eeprom_write_byte((uint8_t *)EE_ALARM_MIN, 0);
     eeprom_write_byte((uint8_t *)EE_BRIGHT, OCR2A_VALUE);
@@ -79,7 +83,11 @@ void init_eeprom(void) {	//Set eeprom to a default state.
     eeprom_write_byte((uint8_t *)EE_REGION, REGION_US);
     eeprom_write_byte((uint8_t *)EE_TIME_FORMAT, TIME_12H);
     eeprom_write_byte((uint8_t *)EE_SNOOZE, 10);
+#ifndef OPTION_DOW_DATELONG
     eeprom_write_byte((uint8_t *)EE_INIT, EE_INITIALIZED);
+#else
+    eeprom_write_byte((uint8_t *)EE_INIT, EE_INITIALIZED-1);
+#endif
   }
 }
 
@@ -158,13 +166,15 @@ int main(void) {
 	  just_pressed = 0;
 	  setsnooze();
 	}
-	if(display_date==1 && !score_mode_timeout)
+
+	if(display_date==3 && !score_mode_timeout)
 	{
-		display_date=4;
-		score_mode = SCORE_MODE_DATELONG_MON;
+		display_date=0;
+		score_mode = SCORE_MODE_YEAR;
 	    score_mode_timeout = 3;
 	    //drawdisplay();
 	}
+#ifdef OPTION_DOW_DATELONG
 	else if(display_date==2 && !score_mode_timeout)
 	{
 		display_date=3;
@@ -172,10 +182,10 @@ int main(void) {
 	    score_mode_timeout = 3;
 	    //drawdisplay();
 	}
-	else if(display_date==3 && !score_mode_timeout)
+	else if(display_date==1 && !score_mode_timeout)
 	{
-		display_date=0;
-		score_mode = SCORE_MODE_YEAR;
+		display_date=4;
+		score_mode = SCORE_MODE_DATELONG_MON;
 	    score_mode_timeout = 3;
 	    //drawdisplay();
 	}
@@ -185,6 +195,8 @@ int main(void) {
 		score_mode = SCORE_MODE_DATELONG_DAY;
 		score_mode_timeout = 3;
 	}
+#endif
+	
 	/*if(display_date && !score_mode_timeout)
 	{
 	  if(last_score_mode == SCORE_MODE_DATELONG)
@@ -223,9 +235,12 @@ int main(void) {
     //This could potentially make you late for work, and had to be fixed.
 	if (just_pressed & 0x6) {
 	  just_pressed = 0;
+#ifdef OPTION_DOW_DATELONG
 	  if((region == REGION_US) || (region == REGION_EU)) {
+#endif
 	  	display_date = 3;
 	  	score_mode = SCORE_MODE_DATE;
+#ifdef OPTION_DOW_DATELONG
 	  }
 	  else if ((region == DOW_REGION_US) || (region == DOW_REGION_EU)) {
 	  	display_date = 2;
@@ -239,6 +254,7 @@ int main(void) {
 	  	display_date = 1;
 	  	score_mode = SCORE_MODE_DOW;
 	  }
+#endif
 	  score_mode_timeout = 3;
 	  //drawdisplay();
 	}
