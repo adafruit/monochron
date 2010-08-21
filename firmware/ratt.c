@@ -362,6 +362,7 @@ uint8_t readi2ctime(void) {
   if (r != 0) {
     DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
     while(1) {
+      sei();
       beep(4000, 100);
       _delay_ms(100);
       beep(4000, 100);
