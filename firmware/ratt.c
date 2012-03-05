@@ -1,3 +1,10 @@
+/* ***************************************************************************
+// ratt.c - the time, init and main loop
+// This code is distributed under the GNU Public License
+//		which can be found at http://www.gnu.org/licenses/gpl.txt
+//
+**************************************************************************** */
+
 #include <avr/io.h>      // this contains all the IO port definitions
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -27,6 +34,7 @@ extern volatile uint8_t screenmutex;
 volatile uint8_t minute_changed = 0, hour_changed = 0;
 volatile uint8_t score_mode_timeout = 0;
 volatile uint8_t score_mode = SCORE_MODE_TIME;
+volatile uint8_t last_score_mode;
 
 // These store the current button states for all 3 buttons. We can 
 // then query whether the buttons are pressed and released or pressed
@@ -106,7 +114,7 @@ int main(void) {
 
   DEBUGP("clock!");
   clock_init();
-
+  init_crand();	//Initialize the seed based upon current time.  Very first value discarded.
   //beep(4000, 100);
 
   init_eeprom();
@@ -158,13 +166,58 @@ int main(void) {
 	  just_pressed = 0;
 	  setsnooze();
 	}
-	if(display_date && !score_mode_timeout)
+	if(display_date==1 && !score_mode_timeout)
+	{
+		display_date=3;
+		score_mode = SCORE_MODE_DATELONG;
+	    score_mode_timeout = 3;
+	    setscore();
+	}
+	else if(display_date==2 && !score_mode_timeout)
+	{
+		display_date=3;
+		score_mode = SCORE_MODE_DATE;
+	    score_mode_timeout = 3;
+	    setscore();
+	}
+	else if(display_date==3 && !score_mode_timeout)
+	{
+		display_date=0;
+		score_mode = SCORE_MODE_YEAR;
+	    score_mode_timeout = 3;
+	    setscore();
+	}
+	/*if(display_date && !score_mode_timeout)
+	{
+	  if(last_score_mode == SCORE_MODE_DATELONG)
+	  {
+	    score_mode = SCORE_MODE_DOW;
+	    score_mode_timeout = 3;
+	    setscore();
+	  }
+	  
+	  else if(last_score_mode == SCORE_MODE_DOW)
+	  {
+	    score_mode = SCORE_MODE_DATE;
+	    score_mode_timeout = 3;
+	    setscore();
+	  }
+	  else if(last_score_mode == SCORE_MODE_DATE)
+	  {
+	    score_mode = SCORE_MODE_YEAR;
+	    score_mode_timeout = 3;
+	    setscore();
+	    display_date = 0;
+	  }
+	  
+	}*/
+	/*if(display_date && !score_mode_timeout)
 	{
 	  score_mode = SCORE_MODE_YEAR;
 	  score_mode_timeout = 3;
 	  setscore();
 	  display_date = 0;
-	}
+	}*/
 
     //Was formally set for just the + button.  However, because the Set button was never
     //accounted for, If the alarm was turned on, and ONLY the set button was pushed since then,
@@ -172,14 +225,32 @@ int main(void) {
     //This could potentially make you late for work, and had to be fixed.
 	if (just_pressed & 0x6) {
 	  just_pressed = 0;
-	  display_date = 1;
-	  score_mode = SCORE_MODE_DATE;
+	  if((region == REGION_US) || (region == REGION_EU)) {
+	  	display_date = 3;
+	  	score_mode = SCORE_MODE_DATE;
+	  }
+	  else if ((region == DOW_REGION_US) || (region == DOW_REGION_EU)) {
+	  	display_date = 2;
+	  	score_mode = SCORE_MODE_DOW;
+	  }
+	  else if (region == DATELONG) {
+	  	display_date = 3;
+	  	score_mode = SCORE_MODE_DATELONG;
+	  }
+	  else {
+	  	display_date = 1;
+	  	score_mode = SCORE_MODE_DOW;
+	  }
 	  score_mode_timeout = 3;
 	  setscore();
 	}
 
     if (just_pressed & 0x1) {
       just_pressed = 0;
+      display_date = 0;
+      score_mode = SCORE_MODE_TIME;
+      score_mode_timeout = 0;
+      setscore();
       switch(displaymode) {
       case (SHOW_TIME):
 	displaymode = SET_ALARM;
@@ -311,11 +382,13 @@ uint8_t readi2ctime(void) {
   uint8_t clockdata[8];
   
   // check the time from the RTC
+  cli();
   r = i2cMasterSendNI(0xD0, 1, &regaddr);
 
   if (r != 0) {
     DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
     while(1) {
+      sei();
       beep(4000, 100);
       _delay_ms(100);
       beep(4000, 100);
@@ -324,6 +397,7 @@ uint8_t readi2ctime(void) {
   }
 
   r = i2cMasterReceiveNI(0xD0, 7, &clockdata[0]);
+  sei();
 
   if (r != 0) {
     DEBUG(putstring("Reading i2c data: ")); DEBUG(uart_putw_dec(r)); DEBUG(putstring_nl(""));
@@ -365,7 +439,9 @@ void writei2ctime(uint8_t sec, uint8_t min, uint8_t hr, uint8_t day,
   clockdata[6] = i2bcd(mon);  // month
   clockdata[7] = i2bcd(yr); // year
   
+  cli();
   uint8_t r = i2cMasterSendNI(0xD0, 8, &clockdata[0]);
+  sei();
 
   //DEBUG(putstring("Writing i2c data: ")); DEBUG(uart_putw_dec()); DEBUG(putstring_nl(""));
 
@@ -419,6 +495,7 @@ SIGNAL (TIMER2_OVF_vect) {
     if(score_mode_timeout) {
 	  score_mode_timeout--;
 	  if(!score_mode_timeout) {
+	  	last_score_mode = score_mode;
 	    score_mode = SCORE_MODE_TIME;
 	    if(hour_changed) {
 	      time_h = old_h;

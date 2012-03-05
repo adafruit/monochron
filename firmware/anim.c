@@ -1,8 +1,16 @@
+/* ***************************************************************************
+// anim.c - the main animation and drawing code for MONOCHRON
+// This code is distributed under the GNU Public License
+//		which can be found at http://www.gnu.org/licenses/gpl.txt
+//
+**************************************************************************** */
+
 #include <avr/io.h>      // this contains all the IO port definitions
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -11,6 +19,7 @@
 #include "ratt.h"
 #include "ks0108.h"
 #include "glcd.h"
+#include "font5x7.h"
 
 extern volatile uint8_t time_s, time_m, time_h;
 extern volatile uint8_t old_m, old_h;
@@ -35,6 +44,76 @@ extern volatile uint8_t minute_changed, hour_changed;
 uint8_t redraw_time = 0;
 uint8_t last_score_mode = 0;
 
+uint32_t rval[2]={0,0};
+uint32_t key[4];
+
+void encipher(void) {  // Using 32 rounds of XTea encryption as a PRNG.
+  unsigned int i;
+  uint32_t v0=rval[0], v1=rval[1], sum=0, delta=0x9E3779B9;
+  for (i=0; i < 32; i++) {
+    v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
+    sum += delta;
+    v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
+  }
+  rval[0]=v0; rval[1]=v1;
+}
+
+void init_crand() {
+  uint32_t temp;
+  key[0]=0x2DE9716E;  //Initial XTEA key. Grabbed from the first 16 bytes
+  key[1]=0x993FDDD1;  //of grc.com/password.  1 in 2^128 chance of seeing
+  key[2]=0x2A77FB57;  //that key again there.
+  key[3]=0xB172E6B0;
+  rval[0]=0;
+  rval[1]=0;
+  encipher();
+  temp = alarm_h;
+  temp<<=8;
+  temp|=time_h;
+  temp<<=8;
+  temp|=time_m;
+  temp<<=8;
+  temp|=time_s;
+  key[0]^=rval[1]<<1;
+  encipher();
+  key[1]^=temp<<1;
+  encipher();
+  key[2]^=temp>>1;
+  encipher();
+  key[3]^=rval[1]>>1;
+  encipher();
+  temp = alarm_m;
+  temp<<=8;
+  temp|=date_m;
+  temp<<=8;
+  temp|=date_d;
+  temp<<=8;
+  temp|=date_y;
+  key[0]^=temp<<1;
+  encipher();
+  key[1]^=rval[0]<<1;
+  encipher();
+  key[2]^=rval[0]>>1;
+  encipher();
+  key[3]^=temp>>1;
+  rval[0]=0;
+  rval[1]=0;
+  encipher();	//And at this point, the PRNG is now seeded, based on power on/date/time reset.
+}
+
+uint16_t crand(uint8_t type) {
+  if((type==0)||(type>2))
+  {
+    wdt_reset();
+    encipher();
+    return (rval[0]^rval[1])&RAND_MAX;
+  } else if (type==1) {
+  	return ((rval[0]^rval[1])>>15)&3;
+  } else if (type==2) {
+  	return ((rval[0]^rval[1])>>17)&1;
+  }
+}
+
 void setscore(void)
 {
   if(score_mode != last_score_mode) {
@@ -42,6 +121,11 @@ void setscore(void)
     last_score_mode = score_mode;
   }
   switch(score_mode) {
+  	case SCORE_MODE_DOW:
+  	  break;
+  	case SCORE_MODE_DATELONG:
+  	  right_score = date_d;
+  	  break;
     case SCORE_MODE_TIME:
       if(alarming && (minute_changed || hour_changed)) {
       	if(hour_changed) {
@@ -56,7 +140,7 @@ void setscore(void)
       }
       break;
     case SCORE_MODE_DATE:
-      if(region == REGION_US) {
+      if((region == REGION_US)||(region == DOW_REGION_US)) {
         left_score = date_m;
         right_score = date_d;
       } else {
@@ -87,8 +171,9 @@ void initanim(void) {
 
   ball_x = (SCREEN_W / 2) - 1;
   ball_y = (SCREEN_H / 2) - 1;
-  ball_dx = -4;
-  ball_dy = -4;
+  float angle = random_angle_rads();
+  ball_dx = MAX_BALL_SPEED * cos(angle);
+  ball_dy = MAX_BALL_SPEED * sin(angle);
 }
 
 void initdisplay(uint8_t inverted) {
@@ -295,7 +380,7 @@ void step(void) {
 	  right_dest = right_keepout_top - PADDLE_H - 1;
 	} else {
 	  //DEBUG(putstring_nl("in the middle"));
-	  if ( ((uint8_t)rand()) & 0x1)
+	  if ( ((uint8_t)crand(2)) & 0x1)
 	    right_dest = right_keepout_top - PADDLE_H - 1;
 	  else
 	    right_dest = right_keepout_bot + 1;
@@ -410,7 +495,7 @@ void step(void) {
 	  left_dest = left_keepout_top - PADDLE_H - 1;
 	} else {
 	  DEBUG(putstring_nl("in the middle"));
-	  if ( ((uint8_t)rand()) & 0x1)
+	  if ( ((uint8_t)crand(2)) & 0x1)
 	    left_dest = left_keepout_top - PADDLE_H - 1;
 	  else
 	    left_dest = left_keepout_bot + 1;
@@ -529,33 +614,7 @@ void draw(uint8_t inverted) {
    }
    TIMSK2 = _BV(TOIE2); //Race issue gone, renable.
     
-    // redraw 10's of hours
-    if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
-				      DISPLAY_H10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
-      
-			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
-				drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
-      else 
-	drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, left_score/10, inverted);
-    }
-    
-    // redraw 1's of hours
-    if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
-		      DISPLAY_H1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
-			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
-				drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
-      else
-	drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left_score%10, inverted);
-    }
-
-    if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
-							DISPLAY_M10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
-      drawbigdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, right_score/10, inverted);
-    }
-    if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
-				      DISPLAY_M1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
-      drawbigdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, right_score%10, inverted);
-    }
+    draw_score(redraw_digits,inverted);
     
     redraw_digits = 0;
     // print 'alarm'
@@ -606,7 +665,166 @@ static unsigned char __attribute__ ((progmem)) BigFont[] = {
 	0x80, 0x80, 0x80, 0xFF,// 7
 	0xFF, 0x91, 0x91, 0xFF,// 8 
 	0xF1, 0x91, 0x91, 0xFF,// 9
+	0x00, 0x00, 0x00, 0x00,// SPACE
 };
+
+static unsigned char __attribute__ ((progmem)) MonthText[] = {
+	0,0,0,
+	'J','A','N',
+	'F','E','B',
+	'M','A','R',
+	'A','P','R',
+	'M','A','Y',
+	'J','U','N',
+	'J','U','L',
+	'A','U','G',
+	'S','E','P',
+	'O','C','T',
+	'N','O','V',
+	'D','E','C',
+};
+
+static unsigned char __attribute__ ((progmem)) DOWText[] = {
+	'S','U','N',
+	'M','O','N',
+	'T','U','E',
+	'W','E','D',
+	'T','H','U',
+	'F','R','I',
+	'S','A','T',
+};
+
+uint8_t dotw(uint8_t mon, uint8_t day, uint8_t yr)
+{
+  uint16_t month, year;
+
+    // Calculate day of the week
+    
+    month = mon;
+    year = 2000 + yr;
+    if (mon < 3)  {
+      month += 12;
+      year -= 1;
+    }
+    return (day + (2 * month) + (6 * (month+1)/10) + year + (year/4) - (year/100) + (year/400) + 1) % 7;
+}
+
+void draw_score(uint8_t redraw_digits, uint8_t inverted) {
+	static uint8_t prev_mode;
+	if(score_mode==SCORE_MODE_DOW) {
+		if(prev_mode != SCORE_MODE_DOW)
+		{
+			drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, 10, inverted);
+			drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, 10, inverted);
+			drawbigdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, 10, inverted);
+			drawbigdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, 10, inverted);
+			glcdFillRectangle(ball_x, ball_y, ball_radius*2, ball_radius*2, ! inverted);
+			prev_mode = SCORE_MODE_DOW;
+		}
+		
+		if(redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_DOW1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+		     drawbigfont(DISPLAY_DOW1_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText+(dotw(date_m,date_d,date_y)*3)+0), inverted);
+		}
+		if(redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_DOW2_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+		     drawbigfont(DISPLAY_DOW2_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText+(dotw(date_m,date_d,date_y)*3)+1), inverted);
+		}
+		if(redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_DOW3_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+		     drawbigfont(DISPLAY_DOW3_X, DISPLAY_TIME_Y, pgm_read_byte(DOWText+(dotw(date_m,date_d,date_y)*3)+2), inverted);
+		}
+	}
+	else if (score_mode==SCORE_MODE_DATELONG) {
+		if(prev_mode != SCORE_MODE_DATELONG)
+		{
+			if(prev_mode == SCORE_MODE_DOW) {
+			  drawbigfont(DISPLAY_DOW1_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigfont(DISPLAY_DOW2_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigfont(DISPLAY_DOW3_X, DISPLAY_TIME_Y, ' ', inverted);
+		    }
+		    if(prev_mode == SCORE_MODE_TIME) {
+		      drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, 10, inverted);
+		    }
+			glcdFillRectangle(ball_x, ball_y, ball_radius*2, ball_radius*2, ! inverted);
+			prev_mode = SCORE_MODE_DATELONG;
+		}
+		if(redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_MON1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+		     drawbigfont(DISPLAY_MON1_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText+(date_m*3)+0), inverted);
+		}
+		if(redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_MON2_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+		     drawbigfont(DISPLAY_MON2_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText+(date_m*3)+1), inverted);
+		}
+		if(redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_MON3_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+		     drawbigfont(DISPLAY_MON3_X, DISPLAY_TIME_Y, pgm_read_byte(MonthText+(date_m*3)+2), inverted);
+		}
+		if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_DAY10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+          drawbigdigit(DISPLAY_DAY10_X, DISPLAY_TIME_Y, right_score/10, inverted);
+        }
+        if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		              DISPLAY_DAY1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+          drawbigdigit(DISPLAY_DAY1_X, DISPLAY_TIME_Y, right_score%10, inverted);
+        }
+	}
+	else {
+	  if((prev_mode == SCORE_MODE_DOW) || (prev_mode == SCORE_MODE_DATELONG))
+		{
+			if(prev_mode == SCORE_MODE_DATELONG) {
+			  drawbigfont(DISPLAY_MON1_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigfont(DISPLAY_MON2_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigfont(DISPLAY_MON3_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigdigit(DISPLAY_DAY10_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_DAY1_X, DISPLAY_TIME_Y, 10, inverted);
+			}
+			if(prev_mode == SCORE_MODE_DOW) {
+			  drawbigfont(DISPLAY_DOW1_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigfont(DISPLAY_DOW2_X, DISPLAY_TIME_Y, ' ', inverted);
+			  drawbigfont(DISPLAY_DOW3_X, DISPLAY_TIME_Y, ' ', inverted);
+		    }
+		    if(prev_mode == SCORE_MODE_TIME) {
+		      drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, 10, inverted);
+			  drawbigdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, 10, inverted);
+		    }
+			glcdFillRectangle(ball_x, ball_y, ball_radius*2, ball_radius*2, ! inverted);
+			prev_mode = SCORE_MODE_TIME;
+		}
+	  if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+				      DISPLAY_H10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+      
+			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+				drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)/10, inverted);
+      else 
+	    drawbigdigit(DISPLAY_H10_X, DISPLAY_TIME_Y, left_score/10, inverted);
+      }
+    
+      // redraw 1's of hours
+      if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+		      DISPLAY_H1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+			if ((time_format == TIME_12H) && ((score_mode == SCORE_MODE_TIME) || (score_mode == SCORE_MODE_ALARM)))
+				drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, ((left_score + 23)%12 + 1)%10, inverted);
+      else
+	    drawbigdigit(DISPLAY_H1_X, DISPLAY_TIME_Y, left_score%10, inverted);
+      }
+
+      if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+							DISPLAY_M10_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+        drawbigdigit(DISPLAY_M10_X, DISPLAY_TIME_Y, right_score/10, inverted);
+      }
+      if (redraw_digits || intersectrect(oldball_x, oldball_y, ball_radius*2, ball_radius*2,
+				      DISPLAY_M1_X, DISPLAY_TIME_Y, DISPLAY_DIGITW, DISPLAY_DIGITH)) {
+        drawbigdigit(DISPLAY_M1_X, DISPLAY_TIME_Y, right_score%10, inverted);
+      }
+  }
+}
 
 
 void drawbigdigit(uint8_t x, uint8_t y, uint8_t n, uint8_t inverted) {
@@ -624,16 +842,31 @@ void drawbigdigit(uint8_t x, uint8_t y, uint8_t n, uint8_t inverted) {
   }
 }
 
+void drawbigfont(uint8_t x, uint8_t y, uint8_t n, uint8_t inverted) {
+  uint8_t i, j;
+  
+  for (i = 0; i < 5; i++) {
+    uint8_t d = pgm_read_byte(Font5x7+((n-0x20)*5)+i);
+    for (j=0; j<7; j++) {
+      if (d & _BV(j)) {
+	glcdFillRectangle(x+i*2, y+j*2, 2, 2, !inverted);
+      } else {
+	glcdFillRectangle(x+i*2, y+j*2, 2, 2, inverted);
+      }
+    }
+  }
+}
+
 float random_angle_rads(void) {
    // create random vector MEME seed it ok???
-    float angle = rand();
+    float angle = crand(0);
 
     //angle = 31930; // MEME DEBUG
     if(DEBUGGING){putstring("\n\rrand = "); uart_putw_dec(angle);}
     angle = (angle * (90.0 - MIN_BALL_ANGLE*2)  / RAND_MAX) + MIN_BALL_ANGLE;
 
     //pick the quadrant
-    uint8_t quadrant = (rand() >> 8) % 4; 
+    uint8_t quadrant = (crand(1)) % 4; 
     //quadrant = 2; // MEME DEBUG
 
     if(DEBUGGING){putstring(" quad = "); uart_putw_dec(quadrant);}
