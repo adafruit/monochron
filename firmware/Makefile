@@ -99,7 +99,7 @@ LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 #
 #AVRDUDE_PROGRAMMER = dt006
 #AVRDUDE_PROGRAMMER = stk500v2
-AVRDUDE_PROGRAMMER = usbtiny
+AVRDUDE_PROGRAMMER = arduino
 
 
 AVRDUDE_PORT = com5	   # programmer connected to serial device
