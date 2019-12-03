@@ -654,7 +654,7 @@ uint8_t intersectrect(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1,
 }
 
 // 8 pixels high
-static unsigned char __attribute__ ((progmem)) BigFont[] = {
+static const unsigned char __attribute__ ((progmem)) BigFont[] = {
 	0xFF, 0x81, 0x81, 0xFF,// 0
 	0x00, 0x00, 0x00, 0xFF,// 1
 	0x9F, 0x91, 0x91, 0xF1,// 2
@@ -668,7 +668,7 @@ static unsigned char __attribute__ ((progmem)) BigFont[] = {
 	0x00, 0x00, 0x00, 0x00,// SPACE
 };
 
-static unsigned char __attribute__ ((progmem)) MonthText[] = {
+static const unsigned char __attribute__ ((progmem)) MonthText[] = {
 	0,0,0,
 	'J','A','N',
 	'F','E','B',
@@ -684,7 +684,7 @@ static unsigned char __attribute__ ((progmem)) MonthText[] = {
 	'D','E','C',
 };
 
-static unsigned char __attribute__ ((progmem)) DOWText[] = {
+static const unsigned char __attribute__ ((progmem)) DOWText[] = {
 	'S','U','N',
 	'M','O','N',
 	'T','U','E',

@@ -20,7 +20,7 @@
 	#include <avr/pgmspace.h>
 #endif
 
-static unsigned char __attribute__ ((progmem)) FontGr[] =
+static const unsigned char __attribute__ ((progmem)) FontGr[] =
 {
 // format is one character per line:
 // length, byte array[length]
