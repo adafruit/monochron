@@ -99,18 +99,21 @@ LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 #
 #AVRDUDE_PROGRAMMER = dt006
 #AVRDUDE_PROGRAMMER = stk500v2
-AVRDUDE_PROGRAMMER = usbtiny
+AVRDUDE_PROGRAMMER = arduino
 
 
 AVRDUDE_PORT = com5	   # programmer connected to serial device
 #AVRDUDE_PORT = /dev/cu.KeySerial1	   # programmer connected to serial device
 #AVRDUDE_PORT = /dev/cu.PL2303-0B2
 #AVRDUDE_PORT = lpt1	# programmer connected to parallel port
+#AVRDUDE_PORT = /dev/ttyUSBx	# programmer connected to USB port
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
 
-AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+AVRDUDE_BAUDRATE = 57600
+
+AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b $(AVRDUDE_BAUDRATE)
 
 # Uncomment the following if you want avrdude's erase cycle counter.
 # Note that this counter needs to be initialized first using -Yn,
